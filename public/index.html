@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#4a3a8c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Ccircle cx='14' cy='14' r='9' fill='none' stroke='%234a3a8c' stroke-width='2'/%3E%3Ccircle cx='14' cy='14' r='3.2' fill='%234a3a8c'/%3E%3Ccircle cx='22' cy='9.5' r='3' fill='%23d4466f'/%3E%3C/svg%3E">
+<title>Orbit</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one narrow column, phone first. Home -> set (tabs) -> review. Palette from H&E staining: hematoxylin violet-blue, eosin pink. */
+:root{
+  --bg:#f7f4f8; --surface:#ffffff; --ink:#241b3a; --muted:#6a627d; --line:#e2dbe9;
+  --hema:#4a3a8c; --on-hema:#ffffff; --eosin:#d4466f; --ok:#217a58; --bad:#b8324f; --tint:#efeaf7;
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#15111d; --surface:#1f1a2b; --ink:#ece7f5; --muted:#a79fbb; --line:#332c44;
+  --hema:#a99cf3; --on-hema:#15111d; --eosin:#f27fa1; --ok:#5fd1a2; --bad:#f0889d; --tint:#2a2340; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#15111d; --surface:#1f1a2b; --ink:#ece7f5; --muted:#a79fbb; --line:#332c44;
+  --hema:#a99cf3; --on-hema:#15111d; --eosin:#f27fa1; --ok:#5fd1a2; --bad:#f0889d; --tint:#2a2340; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--body);padding-inline:16px;padding-block:14px 40px}
+#app{max-width:640px;margin-inline:auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1.15;text-wrap:balance}
+h1{font-size:26px;letter-spacing:-.01em} h2{font-size:21px} h3{font-size:16px}
+p{margin:0}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--hema);outline-offset:2px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:12px;border-bottom:3px solid var(--hema);position:relative}
+.top::after{content:"";position:absolute;left:0;bottom:-3px;width:34%;height:3px;background:var(--eosin)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.pill{font:500 12px var(--mono);border:1px solid var(--line);border-radius:99px;padding:3px 10px;color:var(--muted);white-space:nowrap}
+.pill.hot{color:var(--hema);border-color:var(--hema)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{background:var(--hema);color:var(--on-hema);border:1px solid var(--hema);border-radius:10px;padding:10px 16px;font-weight:600;min-height:44px}
+.btn.ghost{background:transparent;color:var(--hema)}
+.btn.danger{background:transparent;color:var(--bad);border-color:var(--bad)}
+.btn.sm{min-height:36px;padding:6px 12px;font-size:14px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.link{background:none;border:0;color:var(--hema);padding:6px 0;font-weight:600;text-align:left}
+label{font-weight:600;font-size:14px}
+input[type=text],input[type=email],input[type=password],textarea{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px}
+textarea{resize:vertical;min-height:120px;line-height:1.45}
+input[type=file]{font-size:14px;max-width:100%}
+.field{display:flex;flex-direction:column;gap:6px}
+.muted{color:var(--muted)} .small{font-size:13px}
+.big{font:700 40px/1 var(--display)}
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;width:100%;text-align:left;min-width:0}
+.item>div{min-width:0}
+.item .t{font-weight:600;overflow-wrap:anywhere}
+.tag{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;background:var(--tint);color:var(--hema);border-radius:6px;padding:2px 6px;margin-left:6px;vertical-align:2px}
+.week{display:flex;gap:8px;align-items:flex-end;height:64px}
+.week div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%}
+.week i{display:block;width:100%;background:var(--hema);border-radius:4px 4px 0 0;min-height:3px;opacity:.9}
+.week i.zero{background:var(--line)}
+.week span{font:500 11px var(--mono);color:var(--muted)}
+.tabs{display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid var(--line)}
+.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 0;font-weight:600;font-size:13px;color:var(--muted);margin-bottom:-1px}
+.tabs button[aria-selected=true]{color:var(--hema);border-bottom-color:var(--eosin)}
+.prose p{margin-bottom:8px} .prose ul{margin:0 0 8px;padding-left:20px} .prose li{margin-bottom:3px}
+.flash{min-height:200px;display:flex;align-items:center;justify-content:center;text-align:center;font:600 20px/1.35 var(--display);padding:24px 18px;cursor:pointer;overflow-wrap:anywhere;user-select:none}
+.flash .a{color:var(--hema)}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--eosin)}
+.rate{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.rate button{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 2px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:56px}
+.rate small{font:500 11px var(--mono);color:var(--muted)}
+.opt{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 12px;overflow-wrap:anywhere}
+.opt b{font:500 13px var(--mono);color:var(--muted);padding-top:2px}
+.opt.ok{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--surface))}
+.opt.no{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.chat{display:flex;flex-direction:column;gap:10px}
+.bub{padding:10px 12px;border-radius:12px;max-width:92%;overflow-wrap:anywhere}
+.bub.u{align-self:flex-end;background:var(--hema);color:var(--on-hema)}
+.bub.a{align-self:flex-start;background:var(--surface);border:1px solid var(--line)}
+.bub p:last-child,.bub ul:last-child{margin-bottom:0}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{background:var(--tint);color:var(--hema);border:0;border-radius:99px;padding:8px 12px;font-weight:600;font-size:14px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{min-height:78px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px;font-size:13px;line-height:1.3;display:flex;align-items:center;justify-content:center;text-align:center;overflow-wrap:anywhere;hyphens:auto}
+.tile.sel{border-color:var(--hema);background:var(--tint)}
+.tile.bad{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.tile.done{visibility:hidden}
+.status{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--tint);border-radius:10px;padding:8px 12px;font-size:14px}
+.err{color:var(--bad);font-size:14px}
+.okmsg{color:var(--ok);font-size:14px}
+.brand{display:flex;align-items:center;gap:8px}
+.authform{display:flex;flex-direction:column;gap:14px}
+select{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-size:16px;max-width:100%}
+.radio{display:flex;gap:16px;flex-wrap:wrap}
+.radio label{display:flex;gap:6px;align-items:center;font-weight:500}
+.script{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.cardrow{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.cardrow>div{min-width:0;overflow-wrap:anywhere}
+@media (prefers-reduced-motion:no-preference){.bar i{transition:width .25s}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+'use strict';
+var $=function(s){return document.querySelector(s)};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var uid=function(){return Math.random().toString(36).slice(2,9)};
+var DAY=864e5, LS='orbit.v1.anon';
+function dayKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+function cut(s,n){s=String(s);return s.length>n?s.slice(0,n-1)+'…':s}
+function fmt(ms){var m=ms/60000;if(m<60)return Math.max(1,Math.round(m))+'m';var h=m/60;if(h<24)return Math.round(h)+'h';var d=h/24;if(d<30)return Math.round(d)+'d';return (d/30).toFixed(1).replace('.0','')+'mo'}
+function md(s){return esc(s).split('\n').map(function(l){if(/^\s*[-*] /.test(l))return '<li>'+l.replace(/^\s*[-*] /,'')+'</li>';return l.trim()?'<p>'+l+'</p>':''}).join('').replace(/(<li>.*?<\/li>)+/g,function(m){return '<ul>'+m+'</ul>'}).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')}
+
+/* ---------- scheduling: FSRS-5 with default weights, 90% target retention ---------- */
+var W=[0.40255,1.18385,3.173,15.69105,7.1949,0.5345,1.4604,0.0046,1.54575,0.1192,1.01925,1.9395,0.11,0.29605,2.2698,0.2315,2.9898,0.51655,0.6621];
+var DECAY=-0.5, FACTOR=19/81, RET=0.9;
+function clamp(x,a,b){return Math.min(b,Math.max(a,x))}
+function d0(g){return clamp(W[4]-Math.exp(W[5]*(g-1))+1,1,10)}
+function retr(t,s){return Math.pow(1+FACTOR*t/s,DECAY)}
+function ivlDays(s){return clamp(Math.round(s/FACTOR*(Math.pow(RET,1/DECAY)-1)),1,36500)}
+function ensureFsrs(c){
+  if(c.s)return c;
+  if((c.reps||0)>0){var iv=Math.max(1,c.ivl||1);c.s=iv;c.d=clamp(5+(2.5-(c.ease||2.5))*3,1,10);c.last=(c.due||Date.now())-iv*DAY}
+  return c;
+}
+function sched(c,r,now){
+  now=now||Date.now(); ensureFsrs(c);
+  var g=r+1, reps=c.reps||0, lapses=c.lapses||0, s, d;
+  if(!c.s){s=W[g-1];d=d0(g)}
+  else{
+    var t=Math.max(0,(now-c.last)/DAY), s0=c.s, dOld=c.d, R=retr(t,s0);
+    var d1=dOld+(-W[6]*(g-3))*(10-dOld)/9;
+    d=clamp(W[7]*d0(4)+(1-W[7])*d1,1,10);
+    if(t<1)s=s0*Math.exp(W[17]*(g-3+W[18]));
+    else if(g===1)s=Math.min(s0,W[11]*Math.pow(dOld,-W[12])*(Math.pow(s0+1,W[13])-1)*Math.exp((1-R)*W[14]));
+    else s=s0*(1+Math.exp(W[8])*(11-dOld)*Math.pow(s0,-W[9])*(Math.exp((1-R)*W[10])-1)*(g===2?W[15]:1)*(g===4?W[16]:1));
+    if(g===1)lapses++;
+  }
+  s=Math.max(0.01,s);
+  return {s:s,d:d,last:now,reps:reps+1,lapses:lapses,due:g===1?now+600000:now+ivlDays(s)*DAY};
+}
+function newCard(q,a){return {id:uid(),q:q,a:a,due:0,s:0,d:0,last:0,reps:0,lapses:0}}
+
+/* ---------- state ---------- */
+function seed(){
+  var cards=[
+    ['How long does a normal adult red blood cell circulate?','About 120 days.'],
+    ['Which stain is routinely used for blood films?','Wright-Giemsa, a Romanowsky stain.'],
+    ['Which white cell is most abundant in adult blood?','Neutrophils, about 50–70% of white cells.'],
+    ['What is a reticulocyte?','An immature red cell with leftover RNA. Shown with supravital stains such as new methylene blue.'],
+    ['Which anticoagulant is used for a full blood count tube?','EDTA (lavender top).'],
+    ['What does MCV measure?','Mean corpuscular volume: the average size of red cells, in fL.']
+  ].map(function(x,i){var c=newCard(x[0],x[1]);c.id='ex'+i;return c});
+  return {v:1,streak:{count:0,last:''},reviewed:{},sets:[{
+    id:'example1',example:true,title:'Hematology basics',created:Date.now(),
+    summary:'- Red cells live about 120 days and carry oxygen on hemoglobin.\n- Blood films are stained with a Romanowsky stain such as Wright-Giemsa.\n- Neutrophils are the most common white cell.\n- Reticulocytes are young red cells; count them with a supravital stain.\n- Use EDTA for a full blood count so cell shape is preserved.',
+    notes:'Red blood cells (erythrocytes) circulate for about 120 days. Blood films are stained with Wright-Giemsa. Neutrophils make up roughly 50-70% of circulating white cells. Reticulocytes are immature red cells containing residual RNA and are demonstrated with new methylene blue. Full blood count samples are collected in EDTA. MCV is the mean corpuscular volume in fL.',
+    cards:cards,
+    quiz:[
+      {q:'A full blood count sample is collected into which additive?',options:['EDTA','Sodium citrate','Fluoride oxalate','No additive (plain tube)'],answer:0,why:'EDTA keeps cells intact for counting. Citrate is used for coagulation tests.'},
+      {q:'A raised MCV suggests which kind of red cells?',options:['Microcytic','Macrocytic','Normocytic','Hypochromic'],answer:1,why:'MCV above the reference range means larger than normal red cells.'},
+      {q:'Reticulocytes are best shown with which kind of stain?',options:['Gram stain','Supravital stain (new methylene blue)','Ziehl-Neelsen','PAS'],answer:1,why:'Supravital stains precipitate the residual RNA in young red cells.'}
+    ],best:{}
+  }]};
+}
+function load(){try{var t=localStorage.getItem(LS);if(t){var d=JSON.parse(t);if(d&&Array.isArray(d.sets))return d}}catch(e){}return null}
+function norm(d){d=JSON.parse(JSON.stringify(d));d.sets=d.sets||[];d.streak=d.streak||{count:0,last:''};d.reviewed=d.reviewed||{};d.sets.forEach(function(s){s.cards=(s.cards||[]).map(ensureFsrs);s.quiz=s.quiz||[];s.best=s.best||{};s.notes=s.notes||''});return d}
+var S=null;
+var V={name:'loading'}, R=null, Z=null, M=null, T={}, ctl=null, timerId=null;
+var sb=null, user=null, cloudReady=false, recovering=false, syncState='local', touched=false;
+var imgOK=true, imgTypes=['image/jpeg','image/png','image/webp'];
+var pendingImg=null, saveTimer=null, saving=false, dirty=false;
+var AUTH='login', authMsg=null, authBusy=false;
+var LOGO='<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="9" style="fill:none;stroke:var(--hema);stroke-width:2"/><circle cx="14" cy="14" r="3.2" style="fill:var(--hema)"/><circle cx="22" cy="9.5" r="3" style="fill:var(--eosin)"/></svg>';
+var DEFAULT_STYLE='Explain things clearly in plain English. Start with the answer, then give the reasoning with a concrete example. Keep answers short. Quiz me or ask me to explain it back when I ask. Be precise about what is known and what is not, and never inflate.', PREFILL=null;
+function defStyle(){return PREFILL||DEFAULT_STYLE}
+
+function persist(){
+  touched=true; if(S)S.savedAt=Date.now();
+  try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}
+  if(!sb||!user||!cloudReady)return; dirty=true; clearTimeout(saveTimer); saveTimer=setTimeout(flush,900);
+}
+function flush(){
+  if(!sb||!user||!cloudReady||!dirty)return Promise.resolve();
+  if(saving){clearTimeout(saveTimer);saveTimer=setTimeout(flush,500);return Promise.resolve()}
+  saving=true;dirty=false;
+  var row={user_id:user.id,data:JSON.parse(JSON.stringify(S)),updated_at:new Date().toISOString()};
+  return sb.from('libraries').upsert(row).then(function(r){return r&&r.error?Promise.reject(r.error):null}).then(function(){syncState='synced'},function(){syncState='error';dirty=true;clearTimeout(saveTimer);saveTimer=setTimeout(flush,8000)}).then(function(){saving=false;renderStatus();if(dirty&&syncState==='synced'){clearTimeout(saveTimer);saveTimer=setTimeout(flush,900)}});
+}
+function renderStatus(){
+  var el=$('#sync'); if(!el)return;
+  el.textContent=syncState==='synced'?'Saved to your account':syncState==='error'?'Could not sync. Retrying. Your changes are kept on this device.':'Saving…';
+}
+function loadLibrary(){
+  syncState='local';cloudReady=false;
+  return sb.from('libraries').select('data').eq('user_id',user.id).maybeSingle().then(function(r){
+    if(r.error)throw r.error;
+    var cloud=(r.data&&r.data.data&&Array.isArray(r.data.data.sets))?r.data.data:null, local=load(), pick=cloud;
+    if(local&&(!cloud||(local.savedAt||0)>(cloud.savedAt||0)))pick=local;
+    S=norm(pick||seed()); cloudReady=true;
+    if(!S.savedAt)S.savedAt=Date.now();
+    syncState=(cloud&&pick===cloud)?'synced':'local';
+    if(pick!==cloud){dirty=true;flush()}
+  });
+}
+function fetchPrefill(){
+  if(PREFILL!==null)return Promise.resolve();
+  return sb.auth.getSession().then(function(r){var s=r.data&&r.data.session;if(!s)return;return fetch('/api/persona',{headers:{Authorization:'Bearer '+s.access_token}}).then(function(x){return x.json()}).then(function(b){PREFILL=(b&&typeof b.style==='string')?b.style:''})}).catch(function(){PREFILL=''});
+}
+function enter(){
+  V={name:'loading'};render();
+  loadLibrary().then(function(){return S.profile?null:fetchPrefill()}).then(function(){V=S.profile?{name:'home'}:{name:'welcome'};render()}).catch(function(){V={name:'loaderr'};render()});
+}
+function handleSession(session,ev){
+  if(ev==='PASSWORD_RECOVERY'){recovering=true;AUTH='reset';V={name:'auth'};render();return}
+  if(recovering&&session)return;
+  if(!session){user=null;S=null;cloudReady=false;clearTimeout(saveTimer);if(AUTH==='reset')AUTH='login';V={name:'auth'};render();return}
+  if(user&&user.id===session.user.id){user=session.user;return}
+  user=session.user;LS='orbit.v1.'+user.id;AUTH='login';authMsg=null;enter();
+}
+function byId(id){return S?S.sets.filter(function(s){return s.id===id})[0]:undefined}
+function dueCount(sid){var n=Date.now(),k=0;S.sets.forEach(function(s){if(sid&&s.id!==sid)return;s.cards.forEach(function(c){if(c.due<=n)k++})});return k}
+function streakNow(){var l=S.streak.last;return (l===dayKey(new Date())||l===dayKey(new Date(Date.now()-DAY)))?S.streak.count:0}
+function markStudied(n){var t=dayKey(new Date()),y=dayKey(new Date(Date.now()-DAY)),s=S.streak;if(s.last!==t){s.count=s.last===y?s.count+1:1;s.last=t}S.reviewed[t]=(S.reviewed[t]||0)+n}
+
+/* ---------- AI ---------- */
+function status(msg,stop){var el=$('#aistatus');if(!el)return;el.innerHTML=msg?'<div class="status"><span>'+esc(msg)+'</span>'+(stop?'<button class="btn sm ghost" data-act="stop">Stop</button>':'')+'</div>':''}
+function aiErr(e){var c=e&&e.code;return ({session_expired:'Your session ended. Log in again.',rate_limited:'You have reached today’s AI limit. It resets at midnight UTC.',provider_busy:'The AI service is busy. Wait a minute and try again.',not_configured:'AI is not set up on this site yet. Check the Vercel settings.',prompt_too_large:'That is too much text at once. Try a shorter section.',invalid_json:'The AI’s reply could not be read. Try again.',refused:'The AI could not work with that input. Try different notes.',empty_completion:'The AI returned nothing. Try again.',image_rejected:'That image could not be used. Try a clearer photo.',network:'Could not reach the server. Check your connection.'})[c]||'Something went wrong with the AI. Try again.'}
+function persona(){var p=S&&S.profile;return (p&&p.style!=null)?p.style:defStyle()}
+function shrinkImage(file){return new Promise(function(res,rej){var u=URL.createObjectURL(file),im=new Image();im.onload=function(){var k=Math.min(1,1600/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);res({mime:'image/jpeg',data:c.toDataURL('image/jpeg',0.85).split(',')[1]})};im.onerror=function(){URL.revokeObjectURL(u);rej({code:'image_rejected'})};im.src=u})}
+function callAI(messages,o){
+  o=o||{};
+  return sb.auth.getSession().then(function(r){
+    var s=r.data&&r.data.session; if(!s)throw {code:'session_expired'};
+    return (o.image?shrinkImage(o.image):Promise.resolve(null)).then(function(img){
+      var p=(S&&S.profile)||{};
+      return fetch('/api/ai',{method:'POST',signal:o.signal,headers:{'Content-Type':'application/json',Authorization:'Bearer '+s.access_token},body:JSON.stringify({mode:o.json?'json':'text',messages:messages,persona:persona(),profile:{name:p.name,course:p.course},image:img})});
+    });
+  }).then(function(res){
+    return res.json().catch(function(){return {}}).then(function(b){if(!res.ok)throw {code:b.error||'upstream_error'};return b.text});
+  }).catch(function(e){
+    if(e&&e.name==='AbortError')throw {code:'cancelled'};
+    if(e&&e.code)throw e;
+    throw {code:'network'};
+  });
+}
+function parseJSONLoose(t){
+  var s=String(t).trim(), f=s.match(/```(?:json)?\s*([\s\S]*?)```/); if(f)s=f[1].trim();
+  try{return JSON.parse(s)}catch(e){}
+  var a=s.search(/[\[{]/), z=Math.max(s.lastIndexOf('}'),s.lastIndexOf(']'));
+  if(a>-1&&z>a){try{return JSON.parse(s.slice(a,z+1))}catch(e){}}
+  throw {code:'invalid_json'};
+}
+function callJSON(prompt,extra){
+  ctl=new AbortController(); status('Thinking…',true);
+  return callAI([{role:'user',content:prompt}],{json:true,signal:ctl.signal,image:extra&&extra.images}).then(function(t){ctl=null;return parseJSONLoose(t)},function(e){ctl=null;throw e});
+}
+function cleanCards(a){return (Array.isArray(a)?a:[]).filter(function(x){return x&&typeof x.q==='string'&&typeof x.a==='string'&&x.q.trim()&&x.a.trim()}).slice(0,40).map(function(x){return newCard(x.q.trim().slice(0,300),x.a.trim().slice(0,500))})}
+function cleanQuiz(a){return (Array.isArray(a)?a:[]).filter(function(x){return x&&typeof x.q==='string'&&Array.isArray(x.options)&&x.options.length===4&&x.options.every(function(o){return typeof o==='string'})&&Number.isInteger(x.answer)&&x.answer>=0&&x.answer<4}).slice(0,20).map(function(x){return {q:x.q.slice(0,300),options:x.options.map(function(o){return o.slice(0,200)}),answer:x.answer,why:String(x.why||'').slice(0,300)}})}
+var CARD_SHAPE='{"q": "question", "a": "short answer, at most 25 words"}';
+var QUIZ_SHAPE='{"q": "question", "options": ["A","B","C","D"], "answer": 0, "why": "one sentence"} where answer is the index (0-3) of the correct option';
+function onGen(withAI){
+  var title=($('#nt').value||'').trim(), text=($('#nn').value||'').trim().slice(0,30000), lecture=(document.querySelector('input[name=nmode]:checked')||{}).value==='lecture';
+  if(!withAI){
+    if(!title&&!text){status('Add a title or some notes first.');return}
+    var s={id:uid(),title:title||'Untitled set',created:Date.now(),summary:'',notes:text,cards:[],quiz:[],best:{}};
+    S.sets.unshift(s);persist();V={name:'set',setId:s.id,tab:'cards'};render();return;
+  }
+  if(!text&&!pendingImg){status('Paste some notes or add a file first.');return}
+  var prompt='You are building study material for a university student. '+(text?'Use the notes below.':'The notes are in the attached image; read them first.')+(lecture?' The text is a raw lecture transcript with filler words and possible transcription errors, so first tidy it into organised study notes.':'')+' Use only what the notes say and do not invent facts.\nReply with only one JSON object:\n{"title": "short set title, at most 6 words", "summary": "clear study notes in plain text, short lines starting with \\"- \\", at most 300 words", "cards": [ '+CARD_SHAPE+' ] (12 to 20 flashcards, one idea each), "quiz": [ '+QUIZ_SHAPE+' ] (8 multiple-choice questions)}\n'+(text?'\nNotes:\n'+text.slice(0,30000):'');
+  var extra=pendingImg?{images:pendingImg}:{};
+  callJSON(prompt,extra).then(function(r){
+    var cards=cleanCards(r&&r.cards), quiz=cleanQuiz(r&&r.quiz);
+    if(!cards.length&&!quiz.length){status('');$('#aistatus').innerHTML='<p class="err">Claude did not return usable cards. Try again with more detailed notes.</p>';return}
+    var s={id:uid(),title:title||String((r&&r.title)||'New set').slice(0,60),created:Date.now(),summary:String((r&&r.summary)||'').slice(0,3000),notes:text,cards:cards,quiz:quiz,best:{}};
+    S.sets.unshift(s);pendingImg=null;persist();V={name:'set',setId:s.id,tab:'cards'};render();
+  }).catch(function(e){if(e&&e.code==='cancelled'){status('Stopped.');return}status('');var el=$('#aistatus');if(el)el.innerHTML='<p class="err">'+esc(aiErr(e))+'</p>'});
+}
+function moreCards(s){
+  var have=s.cards.map(function(c){return c.q}).join('\n').slice(0,4000);
+  var p='From the notes below, write 10 NEW flashcards that do not repeat these existing questions:\n'+have+'\n\nUse only what the notes say. Reply with only a JSON array of objects like '+CARD_SHAPE+'.\n\nNotes:\n'+(s.notes||s.summary).slice(0,12000);
+  callJSON(p).then(function(r){var n=cleanCards(r);s.cards=s.cards.concat(n);persist();status(n.length+' cards added.');}).catch(function(e){if(e&&e.code==='cancelled'){status('Stopped.');return}status('');var el=$('#aistatus');if(el)el.innerHTML='<p class="err">'+esc(aiErr(e))+'</p>'});
+}
+function newQuiz(s){
+  var p='Write 8 multiple-choice questions from the notes below. Use only what the notes say. Reply with only a JSON array of objects like '+QUIZ_SHAPE+'.\n\nNotes:\n'+(s.notes||s.summary).slice(0,12000);
+  callJSON(p).then(function(r){var q=cleanQuiz(r);if(!q.length){status('');$('#aistatus').innerHTML='<p class="err">No usable questions came back. Try again.</p>';return}s.quiz=q;Z=null;persist();status(q.length+' questions ready. Open the Quiz tab.')}).catch(function(e){if(e&&e.code==='cancelled'){status('Stopped.');return}status('');var el=$('#aistatus');if(el)el.innerHTML='<p class="err">'+esc(aiErr(e))+'</p>'});
+}
+function sendTutor(text){
+  var s=byId(V.setId); if(!s||!text.trim())return;
+  var h=T[s.id]=T[s.id]||[];
+  h.push({role:'user',content:text});
+  var rules='You are a patient study tutor for a university student. Answer using the student’s notes below. If something is not in the notes, say so, then give a short general explanation and label it as outside the notes. Keep answers short and concrete, in short paragraphs or lines starting with "- ". If asked to quiz the student, ask one question at a time and wait for the answer.\n\nSet: '+s.title+'\n\nNotes:\n'+(s.notes||s.summary||'(no notes yet)').slice(0,12000);
+  var turns=[{role:'user',content:rules}].concat(h.slice(-12));
+  ctl=new AbortController(); render(); status('Thinking…',true);
+  callAI(turns,{signal:ctl.signal}).then(function(t){h.push({role:'assistant',content:t});ctl=null;render()}).catch(function(e){
+    ctl=null;
+    if(!(e&&e.code==='cancelled'))h.push({role:'assistant',content:aiErr(e)});
+    render();
+  });
+}
+
+/* ---------- views ---------- */
+function vHome(){
+  var due=dueCount(), st=streakNow(), days=[], goal=(S.profile&&S.profile.goal)||20, tod=S.reviewed[dayKey(new Date())]||0;
+  for(var i=6;i>=0;i--){var d=new Date(Date.now()-i*DAY);days.push({k:dayKey(d),l:'SMTWTFS'.charAt(d.getDay())})}
+  var max=Math.max(10,Math.max.apply(null,days.map(function(d){return S.reviewed[d.k]||0})));
+  var rows=S.sets.map(function(s){var dc=dueCount(s.id);return '<button class="item" data-act="open" data-id="'+s.id+'"><div><div class="t">'+esc(s.title)+(s.example?'<span class="tag">Example</span>':'')+'</div><div class="muted small">'+s.cards.length+' cards · '+s.quiz.length+' questions</div></div><span class="pill'+(dc?' hot':'')+'">'+(dc?dc+' due':'up to date')+'</span></button>'}).join('');
+  return '<header class="top"><div><h1 class="brand">'+LOGO+'Orbit</h1>'+(S.profile?'<div class="muted small">Hi, '+esc(S.profile.name)+'</div>':'')+'</div><span class="pill'+(st?' hot':'')+'">'+st+'-day streak</span></header>'+
+  '<section class="panel"><div class="row" style="justify-content:space-between"><div><div class="big mono">'+due+'</div><div class="muted">cards due now</div></div><button class="btn" data-act="reviewall"'+(due?'':' disabled')+'>Review now</button></div>'+
+  '<div class="bar"><i style="width:'+Math.min(100,Math.round(tod/goal*100))+'%"></i></div><div class="muted small mono">'+tod+' of '+goal+' cards today</div>'+
+  '<div class="week" aria-label="Cards reviewed in the last 7 days">'+days.map(function(d){var n=S.reviewed[d.k]||0;return '<div><i class="'+(n?'':'zero')+'" style="height:'+Math.max(5,Math.round(n/max*100))+'%" title="'+n+' reviewed"></i><span>'+d.l+'</span></div>'}).join('')+'</div></section>'+
+  '<section class="list"><div class="row" style="justify-content:space-between"><h2>Your sets</h2><button class="btn sm" data-act="new">New set</button></div>'+(rows||'<p class="muted">No sets yet. Make one from your lecture notes.</p>')+'</section>'+
+  '<section class="panel"><h3>Account</h3><p class="muted small">'+esc((user&&user.email)||'')+'</p><div class="row"><button class="link" data-act="editprofile">Edit profile</button><button class="link" data-act="logout">Log out</button></div></section>'+
+  '<div class="foot muted small"><span id="sync"></span></div>';
+}
+function vNew(){
+  var acc=imgOK&&imgTypes.length?'.txt,.md,.vtt,.srt,.pdf,text/plain,application/pdf,'+imgTypes.join(','):'.txt,.md,.vtt,.srt,.pdf,text/plain,application/pdf';
+  return '<header class="top"><h1>New set</h1><button class="link" data-act="home">Cancel</button></header>'+
+  '<div class="field"><label for="nt">Title</label><input type="text" id="nt" placeholder="e.g. Clinical chemistry week 3"></div>'+
+  '<div class="field"><label>What are you adding?</label><div class="radio"><label><input type="radio" name="nmode" value="notes" checked> Notes or slides</label><label><input type="radio" name="nmode" value="lecture"> Lecture transcript</label></div></div>'+
+  '<div class="field"><label for="nn">Paste your notes</label><textarea id="nn" rows="9" placeholder="Paste lecture notes or a textbook section. Orbit turns it into a summary, flashcards and a quiz."></textarea></div>'+
+  (recSupported()?'<div class="row"><button type="button" class="btn ghost sm" id="recbtn" data-act="rec">Record a lecture</button></div><div class="muted small" id="recnote"></div>':'<p class="muted small">Live recording needs Chrome or Edge. In other browsers, paste a transcript or use your keyboard’s microphone.</p>')+
+  '<div class="field"><label for="nf">Or add a PDF, text file or transcript (.vtt, .srt)'+(imgOK?', or a photo of your notes':'')+'</label><input type="file" id="nf" accept="'+acc+'"><div id="fname" class="muted small"></div></div>'+
+  '<div class="row"><button class="btn" data-act="gen">Generate with AI</button><button class="btn ghost" data-act="blank">Create empty set</button></div><div id="aistatus"></div>'+
+  '<p class="muted small">Generating uses Orbit’s AI service, with a daily limit for each account.</p>'+
+  '<p class="muted small">Recording turns speech into text with your browser’s speech service. Check the transcript afterwards, as names and technical terms can be misheard.</p>';
+}
+function vSet(){
+  var s=byId(V.setId); if(!s){V={name:'home'};return vHome()}
+  var tabs=[['notes','Notes'],['cards','Cards'],['quiz','Quiz'],['tutor','Tutor'],['match','Match'],['audio','Audio']];
+  var body={notes:tNotes,cards:tCards,quiz:tQuiz,tutor:tTutor,match:tMatch,audio:tAudio}[V.tab](s);
+  return '<header class="top"><h1>'+esc(cut(s.title,40))+'</h1><button class="link" data-act="home">Back</button></header>'+
+  '<div class="tabs" role="tablist">'+tabs.map(function(t){return '<button role="tab" data-act="tab" data-tab="'+t[0]+'" aria-selected="'+(V.tab===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>'+body;
+}
+function tNotes(s){
+  return (s.summary?'<section class="panel"><h3>Study summary</h3><div class="prose">'+md(s.summary)+'</div></section>':'')+
+  '<div class="field"><label for="notes">Your notes</label><textarea id="notes" rows="10" placeholder="Paste or type notes here. The tutor and the AI tools read these.">'+esc(s.notes)+'</textarea></div>'+
+  '<div class="row"><button class="btn" data-act="morecards">More flashcards</button><button class="btn ghost" data-act="newquiz">New quiz</button></div><div id="aistatus"></div>'+
+  '<div class="row">'+(V.confirmDel?'<button class="btn danger" data-act="delset">Tap again to delete this set</button><button class="link" data-act="canceldel">Keep it</button>':'<button class="btn danger sm" data-act="delask">Delete set</button>')+'</div>'+
+  '<div class="foot muted small"><span id="sync"></span></div>';
+}
+function tCards(s){
+  var due=dueCount(s.id), n=Date.now();
+  var list=s.cards.map(function(c){return '<div class="cardrow"><div><div class="t"><strong>'+esc(c.q)+'</strong></div><div class="muted">'+esc(c.a)+'</div><div class="muted small mono">'+(c.due<=n?'due now':'due in '+fmt(c.due-n))+'</div></div><button class="btn sm danger" data-act="delcard" data-id="'+c.id+'" aria-label="Delete card">Delete</button></div>'}).join('');
+  return '<section class="panel"><div class="row" style="justify-content:space-between"><div><div class="big mono">'+due+'</div><div class="muted">due in this set</div></div><button class="btn" data-act="reviewset"'+(due?'':' disabled')+'>Review</button></div></section>'+
+  '<section class="panel"><h3>Add a card</h3><div class="field"><label for="cq">Front</label><input type="text" id="cq"></div><div class="field"><label for="ca">Back</label><input type="text" id="ca"></div><div class="row"><button class="btn sm" data-act="addcard">Add card</button></div></section>'+
+  '<div class="list">'+(list||'<p class="muted">No cards yet. Add one above, or generate them from the Notes tab.</p>')+'</div>';
+}
+function permFor(){return shuffle([0,1,2,3])}
+function tQuiz(s){
+  if(!s.quiz.length)return '<p class="muted">No quiz yet. Open the Notes tab and tap New quiz.</p>';
+  if(!Z||Z.sid!==s.id)Z={sid:s.id,i:0,score:0,picked:null,perm:permFor(),done:false};
+  if(Z.done){var pct=Math.round(Z.score/s.quiz.length*100);return '<section class="panel"><div class="big mono">'+Z.score+' / '+s.quiz.length+'</div><p class="muted">'+pct+'% correct'+(s.best.quiz!=null?' · best '+s.best.quiz+'%':'')+'</p><div class="row"><button class="btn" data-act="quizagain">Try again</button></div></section>'}
+  var q=s.quiz[Z.i], L='ABCD';
+  var opts=Z.perm.map(function(orig,idx){var cls='';if(Z.picked!==null){if(orig===q.answer)cls=' ok';else if(orig===Z.picked)cls=' no'}return '<button class="opt'+cls+'" data-act="pick" data-i="'+idx+'"'+(Z.picked!==null?' disabled':'')+'><b>'+L.charAt(idx)+'</b><span>'+esc(q.options[orig])+'</span></button>'}).join('');
+  return '<div class="muted small mono">Question '+(Z.i+1)+' of '+s.quiz.length+'</div><div class="bar"><i style="width:'+(Z.i/s.quiz.length*100)+'%"></i></div><h3>'+esc(q.q)+'</h3><div class="list">'+opts+'</div>'+
+  (Z.picked!==null?'<section class="panel"><p><strong>'+(Z.picked===q.answer?'Correct.':'Not quite.')+'</strong> '+esc(q.why)+'</p><div class="row"><button class="btn" data-act="qnext">'+(Z.i+1>=s.quiz.length?'See score':'Next question')+'</button></div></section>':'');
+}
+function tTutor(s){
+  var h=T[s.id]||[], live=ctl!==null;
+  var msgs=h.map(function(m){return '<div class="bub '+(m.role==='user'?'u':'a')+'">'+(m.role==='user'?esc(m.content):'<div class="prose">'+md(m.content)+'</div>')+'</div>'}).join('')+(live?'<div class="bub a"><div class="prose" id="live">…</div></div>':'');
+  var chips=!h.length?'<div class="chips">'+['Quiz me on this','Explain the hardest idea simply','Give me a mnemonic'].map(function(c){return '<button class="chip" data-act="chip" data-t="'+esc(c)+'">'+esc(c)+'</button>'}).join('')+'</div>':'';
+  return '<p class="muted small">The tutor answers from your notes. Chats are not saved after you leave.</p><div class="chat">'+msgs+'</div>'+chips+'<div id="aistatus"></div>'+
+  '<div class="field"><label for="tin">Ask a question</label><textarea id="tin" rows="2" style="min-height:60px"></textarea></div><div class="row"><button class="btn" id="tsend" data-act="tsend"'+(live?' disabled':'')+'>Send</button></div>';
+}
+function tMatch(s){
+  if(s.cards.length<4)return '<p class="muted">Match needs at least 4 cards. Add more in the Cards tab.</p>';
+  if(!M||M.sid!==s.id)return '<section class="panel"><h3>Match the pairs</h3><p class="muted">Tap a question, then its answer. Clear the board as fast as you can.</p>'+(s.best.match?'<p class="mono">Best: '+(s.best.match/1000).toFixed(1)+'s</p>':'')+'<div class="row"><button class="btn" data-act="mstart">Start</button></div></section>';
+  var el=M.done?M.end-M.start:(M.start?Date.now()-M.start:0);
+  var tiles=M.tiles.map(function(t,i){var c='tile';if(M.matched.has(i))c+=' done';else if(M.sel===i)c+=' sel';else if(M.wrong&&M.wrong.indexOf(i)>-1)c+=' bad';return '<button class="'+c+'" data-act="tile" data-i="'+i+'">'+esc(t.t)+'</button>'}).join('');
+  return '<div class="row" style="justify-content:space-between"><span class="mono" id="mtime">'+(el/1000).toFixed(1)+'s</span><button class="link" data-act="mstart">Restart</button></div>'+
+  (M.done?'<section class="panel"><h3>Cleared in '+(el/1000).toFixed(1)+'s</h3>'+(s.best.match?'<p class="muted mono">Best: '+(s.best.match/1000).toFixed(1)+'s</p>':'')+'</section>':'')+'<div class="tiles">'+tiles+'</div>';
+}
+var AU={sid:null,idx:0,playing:false,paused:false,rate:1,token:0,segs:[]};
+function segsOf(a){var out=[];a.items.forEach(function(it){var parts=String(it.text).match(/[^.!?]+[.!?]*\s*/g)||[String(it.text)];var cur='';parts.forEach(function(p){if((cur+p).length>200&&cur){out.push({w:it.who,t:cur.trim()});cur=p}else cur+=p});if(cur.trim())out.push({w:it.who,t:cur.trim()})});return out}
+function pickVoice(w){var vs=(window.speechSynthesis.getVoices()||[]).filter(function(v){return /^en/i.test(v.lang)});if(!vs.length)return null;return w==='B'&&vs.length>1?vs[1]:vs[0]}
+function speakFrom(i){
+  var tok=AU.token;
+  if(i>=AU.segs.length){AU.playing=false;AU.paused=false;AU.idx=0;if(V.name==='set'&&V.tab==='audio')render(true);return}
+  AU.idx=i;var seg=AU.segs[i],u=new SpeechSynthesisUtterance(seg.t);u.rate=AU.rate;u.pitch=seg.w==='B'?1.15:1;
+  var v=pickVoice(seg.w);if(v){u.voice=v;u.lang=v.lang}
+  u.onend=function(){if(tok===AU.token&&AU.playing&&!AU.paused)speakFrom(i+1)};
+  var p=$('#apos');if(p)p.textContent='Part '+(i+1)+' of '+AU.segs.length;
+  window.speechSynthesis.speak(u);
+}
+function stopAudio(){AU.token++;AU.playing=false;AU.paused=false;try{if(window.speechSynthesis)window.speechSynthesis.cancel()}catch(e){}}
+function tAudio(s){
+  if(!('speechSynthesis' in window))return '<p class="muted">This browser cannot read text aloud.</p>';
+  var a=s.audio, mine=AU.sid===s.id, playing=AU.playing&&mine;
+  var gen='<section class="panel"><h3>Make an audio lesson</h3><div class="radio"><label><input type="radio" name="astyle" value="lesson"'+((!a||a.style==='lesson')?' checked':'')+'> Lesson, one voice</label><label><input type="radio" name="astyle" value="podcast"'+((a&&a.style==='podcast')?' checked':'')+'> Podcast, two voices</label></div><div class="row"><button class="btn" data-act="audiogen">'+(a?'Make a new one':'Generate with AI')+'</button></div><div id="aistatus"></div></section>';
+  if(!a)return gen+'<p class="muted small">Orbit writes a script from your notes and your phone reads it aloud. Playing it is free and unlimited.</p>';
+  var n=segsOf(a).length;
+  var pos=mine&&(AU.playing||AU.paused)?'Part '+(AU.idx+1)+' of '+n:n+' parts';
+  var ctrl='<section class="panel"><h3>'+(a.style==='podcast'?'Podcast':'Lesson')+' ready</h3><div class="row">'+(playing?'<button class="btn" data-act="apause">Pause</button>':'<button class="btn" data-act="aplay">'+(mine&&AU.paused?'Resume':'Play')+'</button>')+'<button class="btn ghost" data-act="astop">Stop</button><select id="arate" aria-label="Speed"><option value="0.85">0.85x</option><option value="1">1x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option></select></div><div class="muted small mono" id="apos">'+pos+'</div></section>';
+  var script='<section class="panel"><h3>Script</h3><div class="script prose">'+a.items.map(function(i){return '<p>'+(a.style==='podcast'?'<strong>'+(i.who==='B'?'Sam':'Alex')+':</strong> ':'')+esc(i.text)+'</p>'}).join('')+'</div></section>';
+  return gen+ctrl+script;
+}
+function genAudio(s){
+  if(!(s.notes||s.summary)){status('Add some notes first.');return}
+  var style=(document.querySelector('input[name=astyle]:checked')||{}).value||'lesson';
+  var spec=style==='podcast'?'a two-host podcast. Alex is host "A" and explains; Sam is host "B" and asks curious questions. Alternate turns.':'a spoken audio lesson by one teacher, who is always "A".';
+  var p='Write '+spec+' It should teach the notes below to a student in about 700 words, roughly five minutes. Use plain spoken English: short sentences, no markdown, no lists, no headings, and spell out abbreviations the first time. Use only what the notes say.\nReply with only a JSON array of objects like {"who":"A","text":"one or two spoken paragraphs"}.\n\nNotes:\n'+(s.notes||s.summary).slice(0,12000);
+  callJSON(p).then(function(r){
+    var items=(Array.isArray(r)?r:[]).filter(function(x){return x&&typeof x.text==='string'&&x.text.trim()}).slice(0,60).map(function(x){return {who:style==='podcast'&&x.who==='B'?'B':'A',text:x.text.trim().slice(0,1500)}});
+    if(!items.length){status('');var e=$('#aistatus');if(e)e.innerHTML='<p class="err">No usable script came back. Try again.</p>';return}
+    stopAudio();AU.idx=0;s.audio={style:style,items:items,made:Date.now()};persist();render(true);
+  }).catch(function(e){if(e&&e.code==='cancelled'){status('Stopped.');return}status('');var el=$('#aistatus');if(el)el.innerHTML='<p class="err">'+esc(aiErr(e))+'</p>'});
+}
+function vWelcome(){
+  var p=S.profile||{};
+  return '<header class="top"><h1>'+(S.profile?'Your profile':'Welcome')+'</h1>'+(S.profile?'<button class="link" data-act="home">Cancel</button>':'')+'</header>'+
+  '<p class="muted">'+(S.profile?'Update your details.':'Set up your study profile. Your sets, cards and streak save to your Orbit account, so they follow you to any device where you log in.')+'</p>'+
+  '<div class="field"><label for="pn">Your name</label><input type="text" id="pn" value="'+esc(p.name||(user&&user.user_metadata&&user.user_metadata.name)||'')+'" autocomplete="given-name"></div>'+
+  '<div class="field"><label for="pc">Course or programme (optional)</label><input type="text" id="pc" value="'+esc(p.course||'')+'" placeholder="e.g. BSc Biochemistry"></div>'+
+  '<div class="field"><label for="pg">Daily goal</label><select id="pg">'+[10,20,40,80].map(function(n){return '<option value="'+n+'"'+((p.goal||20)===n?' selected':'')+'>'+n+' cards a day</option>'}).join('')+'</select></div>'+
+  '<div class="field"><label for="ps">How should Orbit teach you?</label><textarea id="ps" rows="8" style="min-height:170px">'+esc(p.style!=null?p.style:defStyle())+'</textarea><div class="muted small">The tutor, quizzes and audio lessons follow this. Change it any time.</div><div class="row"><button type="button" class="link" data-act="resetstyle">Reset to the default</button></div></div>'+
+  '<div class="row"><button class="btn" data-act="welcomesave">'+(S.profile?'Save':'Start studying')+'</button></div><div id="aistatus"></div>';
+}
+function saveProfile(){
+  var n=($('#pn').value||'').trim();
+  if(!n){var e=$('#aistatus');if(e)e.innerHTML='<p class="err">Enter your name to continue.</p>';return}
+  S.profile={name:n.slice(0,40),course:($('#pc').value||'').trim().slice(0,60),goal:+$('#pg').value||20,style:(($('#ps')||{}).value||'').trim().slice(0,1500),joined:(S.profile&&S.profile.joined)||Date.now()};
+  persist();V={name:'home'};render();
+}
+function vLoading(){return '<header class="top"><h1 class="brand">'+LOGO+'Orbit</h1></header><p class="muted">Opening your library…</p>'}
+function vSetup(){return '<header class="top"><h1 class="brand">'+LOGO+'Orbit</h1></header><section class="panel"><h3>Almost there</h3><p>This site is missing its Supabase settings. Add SUPABASE_URL and SUPABASE_ANON_KEY in Vercel, then redeploy.</p></section>'}
+function vLoadErr(){return '<header class="top"><h1 class="brand">'+LOGO+'Orbit</h1></header><section class="panel"><h3>Could not open your library</h3><p class="muted">Check your connection, then try again. Your saved sets are safe.</p><div class="row"><button class="btn" data-act="retryload">Try again</button><button class="btn ghost" data-act="logout">Log out</button></div></section>'}
+function authBox(){return authMsg?'<p class="'+(authMsg.k==='err'?'err':'okmsg')+'" role="alert">'+esc(authMsg.t)+'</p>':''}
+function setAuthMsg(k,t){authMsg=t?{k:k,t:t}:null;var e=$('#authmsg');if(e)e.innerHTML=authBox()}
+function authText(err){var m=(err&&err.message)||'';
+  if(/invalid login/i.test(m))return 'Email or password is wrong.';
+  if(/not confirmed/i.test(m))return 'Confirm your email first. Check your inbox for the link.';
+  if(/already registered/i.test(m))return 'That email already has an account. Log in instead.';
+  if(/rate limit|too many|seconds/i.test(m))return 'Too many attempts or emails. Wait a few minutes and try again.';
+  return m||'Something went wrong. Try again.'}
+function vAuth(){
+  var m=AUTH, title={login:'Log in',signup:'Create your account',forgot:'Reset your password',reset:'Choose a new password'}[m], go={login:'Log in',signup:'Create account',forgot:'Send reset link',reset:'Save password'}[m], f='';
+  if(m==='signup')f+='<div class="field"><label for="an">Your name</label><input type="text" id="an" autocomplete="given-name"></div>';
+  if(m!=='reset')f+='<div class="field"><label for="ae">Email</label><input type="email" id="ae" autocomplete="email" inputmode="email"></div>';
+  if(m!=='forgot')f+='<div class="field"><label for="ap">'+(m==='reset'?'New password':'Password')+'</label><input type="password" id="ap" autocomplete="'+(m==='login'?'current-password':'new-password')+'">'+(m==='login'?'':'<div class="muted small">At least 8 characters.</div>')+'</div>';
+  var links={login:'<button type="button" class="link" data-act="authmode" data-m="signup">Create an account</button><button type="button" class="link" data-act="authmode" data-m="forgot">Forgot password?</button>',signup:'<button type="button" class="link" data-act="authmode" data-m="login">I already have an account</button>',forgot:'<button type="button" class="link" data-act="authmode" data-m="login">Back to log in</button>',reset:''}[m];
+  return '<header class="top"><h1 class="brand">'+LOGO+'Orbit</h1></header><h2>'+title+'</h2>'+(m==='login'?'<p class="muted">Log in to open your library.</p>':'')+
+    '<form id="authform" class="authform" novalidate>'+f+'<div id="authmsg">'+authBox()+'</div><div class="row"><button class="btn" type="submit" id="authgo">'+go+'</button></div></form><div class="row" style="justify-content:space-between">'+links+'</div>';
+}
+function doAuth(){
+  if(authBusy||!sb)return;
+  var em=(($('#ae')||{}).value||'').trim(), pw=($('#ap')||{}).value||'', nm=(($('#an')||{}).value||'').trim(), p;
+  if(AUTH==='login'){if(!em||!pw)return setAuthMsg('err','Enter your email and password.');p=sb.auth.signInWithPassword({email:em,password:pw})}
+  else if(AUTH==='signup'){if(!nm)return setAuthMsg('err','Enter your name.');if(!em)return setAuthMsg('err','Enter your email.');if(pw.length<8)return setAuthMsg('err','Use a password with at least 8 characters.');p=sb.auth.signUp({email:em,password:pw,options:{data:{name:nm.slice(0,40)},emailRedirectTo:location.origin}})}
+  else if(AUTH==='forgot'){if(!em)return setAuthMsg('err','Enter your email.');p=sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin})}
+  else{if(pw.length<8)return setAuthMsg('err','Use a password with at least 8 characters.');p=sb.auth.updateUser({password:pw})}
+  authBusy=true;setAuthMsg('ok','Working…');
+  p.then(function(r){
+    authBusy=false;
+    if(r.error)return setAuthMsg('err',authText(r.error));
+    if(AUTH==='signup'){
+      if(r.data&&r.data.session)return;
+      if(r.data&&r.data.user&&r.data.user.identities&&r.data.user.identities.length===0)return setAuthMsg('err','That email already has an account. Log in instead.');
+      AUTH='login';render();return setAuthMsg('ok','Account created. Check your email for a confirmation link, then log in.');
+    }
+    if(AUTH==='forgot'){AUTH='login';render();return setAuthMsg('ok','If that email has an account, a reset link is on its way.')}
+    if(AUTH==='reset'){
+      recovering=false;AUTH='login';
+      return sb.auth.getSession().then(function(x){if(user&&S){V=S.profile?{name:'home'}:{name:'welcome'};render()}else handleSession(x.data&&x.data.session,'SIGNED_IN')});
+    }
+  }).catch(function(){authBusy=false;setAuthMsg('err','Could not reach the server. Check your connection.')});
+}
+function vReview(){
+  if(!R||R.i>=R.q.length)return '<header class="top"><h1>Review</h1><button class="link" data-act="leave">Done</button></header><section class="panel"><h2>All caught up</h2><p class="muted">You reviewed '+(R?R.count:0)+' cards. They will come back when they are due.</p><div class="row"><button class="btn" data-act="leave">Back</button></div></section>';
+  var pair=R.q[R.i], s=byId(pair[0]), c=s&&s.cards.filter(function(x){return x.id===pair[1]})[0];
+  if(!c){R.i++;return vReview()}
+  var now=Date.now();
+  var rate=R.shown?'<div class="rate">'+['Again','Hard','Good','Easy'].map(function(l,r){return '<button data-act="rate" data-r="'+r+'">'+l+'<small>'+fmt(sched(c,r).due-now)+'</small></button>'}).join('')+'</div>':'<div class="row"><button class="btn" data-act="flip" style="width:100%">Show answer</button></div>';
+  return '<header class="top"><h1>Review</h1><button class="link" data-act="leave">Stop</button></header>'+
+  '<div class="muted small mono">'+(R.i+1)+' of '+R.q.length+' · '+esc(cut(s.title,28))+'</div><div class="bar"><i style="width:'+(R.i/R.q.length*100)+'%"></i></div>'+
+  '<section class="panel flash" data-act="flip"><div>'+esc(c.q)+(R.shown?'<div class="a" style="margin-top:14px">'+esc(c.a)+'</div>':'')+'</div></section>'+rate;
+}
+function render(keep){
+  clearInterval(timerId);
+  if(V.name!=='new')stopRec();
+  var a=$('#app'); if(!a)return;
+  a.innerHTML=({home:vHome,new:vNew,set:vSet,review:vReview,welcome:vWelcome,auth:vAuth,loading:vLoading,setup:vSetup,loaderr:vLoadErr})[V.name]();var ar=$('#arate');if(ar)ar.value=String(AU.rate);
+  renderStatus();
+  if(V.name==='set'&&V.tab==='match'&&M&&M.start&&!M.done){timerId=setInterval(function(){var e=$('#mtime');if(e)e.textContent=((Date.now()-M.start)/1000).toFixed(1)+'s'},200)}
+  if(!keep)window.scrollTo(0,0);
+}
+
+/* ---------- actions ---------- */
+document.addEventListener('click',function(e){
+  var b=e.target.closest('[data-act]'); if(!b||b.disabled)return;
+  var d=b.dataset, s=byId(V.setId), a=d.act;
+  if(a==='home'||a==='open'||(a==='tab'&&d.tab!=='audio'))stopAudio();
+  if(a==='home'){V={name:'home'};Z=null;M=null;render()}
+  else if(a==='new'){V={name:'new'};pendingImg=null;render()}
+  else if(a==='open'){V={name:'set',setId:d.id,tab:'cards'};Z=null;M=null;render()}
+  else if(a==='tab'){V.tab=d.tab;V.confirmDel=false;render()}
+  else if(a==='gen'){stopRec();onGen(true)}
+  else if(a==='blank')onGen(false);
+  else if(a==='stop'){if(ctl)ctl.abort()}
+  else if(a==='audiogen'&&s)genAudio(s);
+  else if(a==='aplay'&&s&&s.audio){var resume=AU.sid===s.id&&AU.paused;stopAudio();AU.sid=s.id;AU.segs=segsOf(s.audio);if(!resume)AU.idx=0;AU.playing=true;AU.paused=false;var rt=$('#arate');if(rt)AU.rate=+rt.value;render(true);setTimeout(function(){speakFrom(AU.idx)},80)}
+  else if(a==='apause'){AU.token++;try{window.speechSynthesis.cancel()}catch(x){}AU.playing=false;AU.paused=true;render(true)}
+  else if(a==='astop'){stopAudio();AU.idx=0;render(true)}
+  else if(a==='welcomesave')saveProfile();
+  else if(a==='resetstyle'){var ps=$('#ps');if(ps)ps.value=defStyle()}
+  else if(a==='authmode'){AUTH=d.m;authMsg=null;render()}
+  else if(a==='retryload'){enter()}
+  else if(a==='rec'){if(recOn)stopRec();else startRec()}
+  else if(a==='logout'){stopAudio();stopRec();flush().then(function(){if(syncState==='synced'){try{localStorage.removeItem(LS)}catch(x){}}return sb.auth.signOut()})}
+  else if(a==='editprofile'){V={name:'welcome'};render()}
+  else if(a==='morecards'&&s)moreCards(s);
+  else if(a==='newquiz'&&s)newQuiz(s);
+  else if(a==='delask'){V.confirmDel=true;render()}
+  else if(a==='canceldel'){V.confirmDel=false;render()}
+  else if(a==='delset'&&s){S.sets=S.sets.filter(function(x){return x.id!==s.id});persist();V={name:'home'};render()}
+  else if(a==='addcard'&&s){var q=($('#cq').value||'').trim(),an=($('#ca').value||'').trim();if(q&&an){s.cards.unshift(newCard(q.slice(0,300),an.slice(0,500)));persist();render()}}
+  else if(a==='delcard'&&s){s.cards=s.cards.filter(function(c){return c.id!==d.id});persist();render()}
+  else if(a==='reviewall')startReview(null);
+  else if(a==='reviewset')startReview(V.setId);
+  else if(a==='flip'&&R){R.shown=true;render()}
+  else if(a==='rate'&&R){
+    var pair=R.q[R.i], rs=byId(pair[0]), c=rs.cards.filter(function(x){return x.id===pair[1]})[0], r=+d.r;
+    Object.assign(c,sched(c,r)); markStudied(1); R.count++; if(r===0)R.q.push(pair);
+    R.i++; R.shown=false; persist(); render();
+  }
+  else if(a==='leave'){V=R&&R.scope?{name:'set',setId:R.scope,tab:'cards'}:{name:'home'};R=null;render()}
+  else if(a==='pick'&&s&&Z&&Z.picked===null){var q2=s.quiz[Z.i];Z.picked=Z.perm[+d.i];if(Z.picked===q2.answer)Z.score++;render()}
+  else if(a==='qnext'&&s&&Z){Z.i++;Z.picked=null;if(Z.i>=s.quiz.length){Z.done=true;var pct=Math.round(Z.score/s.quiz.length*100);s.best.quiz=Math.max(s.best.quiz||0,pct);markStudied(s.quiz.length);persist()}else Z.perm=permFor();render()}
+  else if(a==='quizagain'){Z=null;render()}
+  else if(a==='chip'){sendTutor(d.t)}
+  else if(a==='tsend'){var t=$('#tin');if(t&&t.value.trim()){var v=t.value;sendTutor(v)}}
+  else if(a==='mstart'&&s){
+    var pick=shuffle(s.cards).slice(0,6), tiles=[];
+    pick.forEach(function(c){tiles.push({pid:c.id,t:cut(c.q,70)},{pid:c.id,t:cut(c.a,70)})});
+    M={sid:s.id,tiles:shuffle(tiles),sel:null,matched:new Set(),wrong:null,lock:false,start:0,end:0,done:false};render();
+  }
+  else if(a==='tile'&&s&&M){
+    var i=+d.i; if(M.lock||M.done||M.matched.has(i))return;
+    if(!M.start)M.start=Date.now();
+    if(M.sel===null)M.sel=i;
+    else if(M.sel===i)M.sel=null;
+    else{
+      var x=M.tiles[M.sel], y=M.tiles[i];
+      if(x.pid===y.pid){M.matched.add(M.sel);M.matched.add(i);M.sel=null;
+        if(M.matched.size===M.tiles.length){M.done=true;M.end=Date.now();var t2=M.end-M.start;s.best.match=s.best.match?Math.min(s.best.match,t2):t2;markStudied(M.tiles.length/2);persist()}}
+      else{M.wrong=[M.sel,i];M.sel=null;M.lock=true;render();setTimeout(function(){if(M){M.wrong=null;M.lock=false;if(V.name==='set'&&V.tab==='match')render()}},550);return}
+    }
+    render();
+  }
+});
+function startReview(scope){
+  var n=Date.now(),q=[];
+  S.sets.forEach(function(s){if(scope&&s.id!==scope)return;s.cards.forEach(function(c){if(c.due<=n)q.push([s.id,c.id])})});
+  R={q:shuffle(q),i:0,shown:false,scope:scope,count:0};V={name:'review'};render();
+}
+function loadScript(src){return new Promise(function(res,rej){var s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+var PDFB='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+function readPdf(file){
+  var p=window.pdfjsLib?Promise.resolve():loadScript(PDFB+'pdf.min.js').then(function(){return loadScript(PDFB+'pdf.worker.min.js')});
+  return p.then(function(){window.pdfjsLib.GlobalWorkerOptions.workerSrc=PDFB+'pdf.worker.min.js';return file.arrayBuffer()}).then(function(buf){return window.pdfjsLib.getDocument({data:buf}).promise}).then(function(doc){
+    var n=Math.min(doc.numPages,80),out='',i=1;
+    function next(){if(i>n||out.length>40000)return Promise.resolve(out);return doc.getPage(i++).then(function(pg){return pg.getTextContent()}).then(function(tc){out+=tc.items.map(function(x){return x.str}).join(' ')+'\n\n';return next()})}
+    return next();
+  });
+}
+function cleanSubs(t){return t.replace(/\r/g,'').split('\n').filter(function(l){l=l.trim();return l&&!/^WEBVTT/.test(l)&&!/^\d+$/.test(l)&&!/-->/.test(l)&&!/^(NOTE|Kind:|Language:)/.test(l)}).map(function(l){return l.replace(/<[^>]+>/g,'')}).join(' ')}
+function addText(t,label,name){var n=$('#nn'),nm=$('#fname');if(n)n.value=(n.value?n.value+'\n\n':'')+t.slice(0,30000);if(nm)nm.textContent=label+': '+name}
+var REC=null, recOn=false, wake=null;
+function recSupported(){return !!(window.SpeechRecognition||window.webkitSpeechRecognition)}
+function recLabel(){var b=$('#recbtn');if(b){b.textContent=recOn?'Stop recording':'Record a lecture';b.classList.toggle('danger',recOn)}var n=$('#recnote');if(n&&recOn)n.textContent='Listening. Keep the screen on and the phone close to the speaker.';else if(n&&!n.dataset.keep)n.textContent=''}
+function stopRec(){recOn=false;var r=REC;REC=null;if(r){try{r.stop()}catch(e){}}if(wake){try{wake.release()}catch(e){}wake=null}recLabel()}
+function startRec(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition, ta=$('#nn'); if(!SR||recOn||!ta)return;
+  var base=ta.value, finalT='', r=new SR();
+  var radio=document.querySelector('input[name=nmode][value=lecture]'); if(radio)radio.checked=true;
+  r.continuous=true; r.interimResults=true; r.lang=navigator.language||'en-GB';
+  r.onresult=function(e){var interim='';for(var i=e.resultIndex;i<e.results.length;i++){var x=e.results[i];if(x.isFinal)finalT+=x[0].transcript.trim()+' ';else interim+=x[0].transcript}var t=$('#nn');if(t)t.value=(base?base+'\n\n':'')+finalT+interim};
+  r.onend=function(){if(recOn&&REC===r){try{r.start()}catch(e){}}};
+  r.onerror=function(e){if(e.error==='not-allowed'||e.error==='service-not-allowed'){stopRec();var n=$('#recnote');if(n){n.dataset.keep='1';n.textContent='Microphone access was blocked. Allow it in your browser settings and try again.'}}};
+  REC=r; recOn=true;
+  try{r.start()}catch(e){stopRec();return}
+  try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(function(w){wake=w}).catch(function(){})}catch(e){}
+  var n2=$('#recnote');if(n2)delete n2.dataset.keep;
+  recLabel();
+}
+var noteTimer=null;
+document.addEventListener('input',function(e){
+  if(e.target.id==='notes'){var s=byId(V.setId);if(!s)return;s.notes=e.target.value.slice(0,20000);clearTimeout(noteTimer);noteTimer=setTimeout(persist,700)}
+});
+document.addEventListener('change',function(e){
+  if(e.target.id==='arate'){AU.rate=+e.target.value;return}
+  if(e.target.id!=='nf')return;
+  var f=e.target.files&&e.target.files[0]; if(!f)return;
+  var nm=$('#fname');
+  if(/^image\//.test(f.type)){pendingImg=f;if(nm)nm.textContent='Photo added: '+f.name}
+  else if(/\.pdf$/i.test(f.name)||f.type==='application/pdf'){if(nm)nm.textContent='Reading PDF…';readPdf(f).then(function(t){if(t.replace(/\s/g,'').length<80){if(nm)nm.textContent='No text found. This PDF may be scanned. Add photos of the pages instead.';return}addText(t,'PDF added',f.name)}).catch(function(){if(nm)nm.textContent='Could not read that PDF. Try copying the text instead.'})}
+  else{f.text().then(function(t){if(/\.(vtt|srt)$/i.test(f.name))t=cleanSubs(t);addText(t,'Added',f.name)}).catch(function(){if(nm)nm.textContent='Could not read that file.'})}
+});
+
+/* ---------- boot ---------- */
+document.addEventListener('submit',function(e){if(e.target&&e.target.id==='authform'){e.preventDefault();doAuth()}});
+document.addEventListener('visibilitychange',function(){if(document.hidden){clearTimeout(saveTimer);flush()}});
+render();
+fetch('/api/config',{cache:'no-store'}).then(function(r){return r.json()}).then(function(cfg){
+  if(!cfg||!cfg.url||!cfg.anon||!window.supabase){V={name:'setup'};render();return}
+  sb=window.supabase.createClient(cfg.url,cfg.anon,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  sb.auth.onAuthStateChange(function(ev,session){setTimeout(function(){handleSession(session,ev)},0)});
+}).catch(function(){V={name:'setup'};render()});
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "name": "orbit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Orbit: a free study app with sign-in, flashcards, FSRS, quizzes, a tutor and audio lessons.",
+  "engines": { "node": ">=18" }
+}
