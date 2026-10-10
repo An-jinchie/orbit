@@ -1,6 +1,11 @@
 {
   "outputDirectory": "public",
   "functions": {
-    "api/ai.js": { "maxDuration": 60 }
+    "api/ai.js": {
+      "maxDuration": 60
+    },
+    "api/tts.js": {
+      "maxDuration": 60
+    }
   }
 }
