@@ -4,7 +4,10 @@
 
 const { systemFor, clean } = require('./_persona.js');
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+// Tried in order. The first one that works is used. Set GEMINI_MODEL to put your own choice first.
+const MODELS = [process.env.GEMINI_MODEL, 'gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.1-flash-lite']
+  .filter(Boolean)
+  .filter((m, i, a) => a.indexOf(m) === i);
 const DAILY = parseInt(process.env.AI_DAILY_LIMIT || '120', 10);
 const MIMES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -75,25 +78,35 @@ module.exports = async function handler(req, res) {
 
     // 4. Ask Gemini.
     const system = systemFor(b.persona, b.profile, json);
-    const g = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(MODEL) + ':generateContent',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GK },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: system }] },
-          contents,
-          generationConfig: Object.assign(
-            { temperature: json ? 0.4 : 0.7, maxOutputTokens: 8192 },
-            json ? { responseMimeType: 'application/json' } : {}
-          ),
-        }),
-      }
-    );
-    if (g.status === 429) return send(res, 429, { error: 'provider_busy' });
-    if (!g.ok) {
-      console.error('gemini error', g.status, (await g.text()).slice(0, 300));
-      return send(res, 502, { error: 'upstream_error' });
+    const payload = JSON.stringify({
+      systemInstruction: { parts: [{ text: system }] },
+      contents,
+      generationConfig: Object.assign(
+        { temperature: json ? 0.4 : 0.7, maxOutputTokens: json ? 16384 : 8192 },
+        json ? { responseMimeType: 'application/json' } : {}
+      ),
+    });
+    let g = null;
+    let lastDetail = '';
+    let sawBusy = false;
+    for (const model of MODELS) {
+      const r = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent',
+        { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GK }, body: payload }
+      );
+      if (r.ok) { g = r; break; }
+      const t = (await r.text()).slice(0, 400);
+      console.error('gemini error', model, r.status, t);
+      let msg = '';
+      try { msg = JSON.parse(t).error.message || ''; } catch (e) { msg = t; }
+      lastDetail = (model + ': ' + r.status + ' ' + msg).replace(/key=\S+/g, '').slice(0, 220);
+      if (r.status === 429) { sawBusy = true; continue; }
+      if (r.status === 400 && /api key/i.test(msg)) return send(res, 502, { error: 'bad_key', detail: lastDetail });
+      continue; // not found, no access, or a hiccup: try the next model
+    }
+    if (!g) {
+      if (sawBusy) return send(res, 429, { error: 'provider_busy', detail: lastDetail });
+      return send(res, 502, { error: 'upstream_error', detail: lastDetail });
     }
     const d = await g.json();
     const cand = d.candidates && d.candidates[0];
