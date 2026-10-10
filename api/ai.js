@@ -82,7 +82,7 @@ module.exports = async function handler(req, res) {
       systemInstruction: { parts: [{ text: system }] },
       contents,
       generationConfig: Object.assign(
-        { temperature: json ? 0.4 : 0.7, maxOutputTokens: json ? 16384 : 8192 },
+        { temperature: json ? 0.4 : 0.7, maxOutputTokens: 16384 },
         json ? { responseMimeType: 'application/json' } : {}
       ),
     });
