@@ -77,6 +77,26 @@ input[type=file]{font-size:15px;max-width:100%}
 .tools button[aria-selected=true]{background:var(--tint);color:var(--hema);border-color:var(--hema)}
 .ic{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .prose{font-size:17px;line-height:1.65}
+.prose h2{font-size:22px;margin:26px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--tint)}
+.prose h2:first-child{margin-top:0}
+.prose h3{font-size:18px;margin:18px 0 6px;color:var(--hema)}
+.prose blockquote{margin:12px 0;padding:10px 14px;background:var(--tint);border-left:4px solid var(--hema);border-radius:0 12px 12px 0}
+.prose ol{margin:0 0 10px;padding-left:24px}
+.prose li.l2{margin-left:20px;list-style:circle}
+.prose code{background:var(--soft);border-radius:6px;padding:1px 6px;font-size:.92em}
+.prose hr{border:0;border-top:1px solid var(--line);margin:16px 0}
+.prose table{border-collapse:collapse;width:100%;margin:10px 0;font-size:16px}
+.prose th,.prose td{border:1px solid var(--line);padding:8px 10px;text-align:left}
+.prose th{background:var(--soft)}
+.drop{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;border:2px dashed var(--line);border-radius:20px;padding:28px 16px;background:var(--soft);cursor:pointer}
+.drop:hover,.drop.over{border-color:var(--hema);background:var(--tint)}
+.drop .ic{width:34px;height:34px;color:var(--hema)}
+.drop input{display:none}
+.fchip{display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px}
+.fchip span{overflow-wrap:anywhere;font-weight:600}
+.fchip button{background:none;border:0;font-size:22px;line-height:1;color:var(--muted);padding:2px 8px}
+.srcbox{white-space:pre-wrap;font:15px/1.5 var(--body);margin:0}
+details.panel summary{cursor:pointer;font-weight:700;font-size:18px}
 .prose p{margin-bottom:10px} .prose ul{margin:0 0 10px;padding-left:22px} .prose li{margin-bottom:5px}
 .flash{min-height:280px;display:flex;align-items:center;justify-content:center;text-align:center;font:700 26px/1.35 var(--display);padding:32px 22px;cursor:pointer;overflow-wrap:anywhere;user-select:none}
 .flash.static{cursor:default;min-height:170px}
@@ -173,7 +193,28 @@ function dayKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,
 function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
 function cut(s,n){s=String(s);return s.length>n?s.slice(0,n-1)+'…':s}
 function fmt(ms){var m=ms/60000;if(m<60)return Math.max(1,Math.round(m))+'m';var h=m/60;if(h<24)return Math.round(h)+'h';var d=h/24;if(d<30)return Math.round(d)+'d';return (d/30).toFixed(1).replace('.0','')+'mo'}
-function md(s){return esc(s).split('\n').map(function(l){if(/^\s*[-*] /.test(l))return '<li>'+l.replace(/^\s*[-*] /,'')+'</li>';return l.trim()?'<p>'+l+'</p>':''}).join('').replace(/(<li>.*?<\/li>)+/g,function(m){return '<ul>'+m+'</ul>'}).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')}
+function mdInline(t){return t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g,'$1<em>$2</em>').replace(/`([^`]+)`/g,'<code>$1</code>')}
+function md(s){
+  var out=[],list=null,tbl=null;
+  function close(){if(list){out.push('</'+list+'>');list=null}if(tbl){out.push('<table>'+tbl.join('')+'</table>');tbl=null}}
+  String(s==null?'':s).replace(/\r/g,'').split('\n').forEach(function(raw){
+    var m;
+    if(/^\s*\|.*\|\s*$/.test(raw)){
+      if(/^\s*\|[\s:|-]+\|\s*$/.test(raw))return;
+      if(list)close();
+      var first=!tbl;tbl=tbl||[];var tg=first?'th':'td';
+      tbl.push('<tr>'+raw.trim().replace(/^\||\|$/g,'').split('|').map(function(c){return '<'+tg+'>'+mdInline(esc(c.trim()))+'</'+tg+'>'}).join('')+'</tr>');return;
+    }
+    if(tbl)close();
+    if(m=raw.match(/^\s{0,3}(#{1,4})\s+(.*)$/)){close();var h=m[1].length<=2?'h2':'h3';out.push('<'+h+'>'+mdInline(esc(m[2]))+'</'+h+'>');return}
+    if(m=raw.match(/^(\s*)[-*•]\s+(.*)$/)){if(list!=='ul'){close();out.push('<ul>');list='ul'}out.push('<li'+(m[1].length>=2?' class="l2"':'')+'>'+mdInline(esc(m[2]))+'</li>');return}
+    if(m=raw.match(/^\s*\d+[.)]\s+(.*)$/)){if(list!=='ol'){close();out.push('<ol>');list='ol'}out.push('<li>'+mdInline(esc(m[1]))+'</li>');return}
+    if(m=raw.match(/^>\s?(.*)$/)){close();out.push('<blockquote>'+mdInline(esc(m[1]))+'</blockquote>');return}
+    if(/^\s*([-*_])\1{2,}\s*$/.test(raw)){close();out.push('<hr>');return}
+    close();if(raw.trim())out.push('<p>'+mdInline(esc(raw))+'</p>');
+  });
+  close();return out.join('');
+}
 
 /* ---------- scheduling: FSRS-5 with default weights, 90% target retention ---------- */
 var W=[0.40255,1.18385,3.173,15.69105,7.1949,0.5345,1.4604,0.0046,1.54575,0.1192,1.01925,1.9395,0.11,0.29605,2.2698,0.2315,2.9898,0.51655,0.6621];
@@ -228,7 +269,7 @@ function seed(){
   }]};
 }
 function load(){try{var t=localStorage.getItem(LS);if(t){var d=JSON.parse(t);if(d&&Array.isArray(d.sets))return d}}catch(e){}return null}
-function norm(d){d=JSON.parse(JSON.stringify(d));d.sets=d.sets||[];d.streak=d.streak||{count:0,last:''};d.reviewed=d.reviewed||{};d.sets.forEach(function(s){s.cards=(s.cards||[]).map(ensureFsrs);s.quiz=s.quiz||[];s.best=s.best||{};s.notes=s.notes||''});return d}
+function norm(d){d=JSON.parse(JSON.stringify(d));d.sets=d.sets||[];d.streak=d.streak||{count:0,last:''};d.reviewed=d.reviewed||{};d.sets.forEach(function(s){s.cards=(s.cards||[]).map(ensureFsrs);s.quiz=s.quiz||[];s.best=s.best||{};s.notes=s.notes||'';s.source=s.source||''});return d}
 var S=null;
 var V={name:'loading'}, R=null, Z=null, M=null, G=null, T={}, ctl=null, timerId=null;
 var sb=null, user=null, cloudReady=false, recovering=false, syncState='local', touched=false;
@@ -319,41 +360,116 @@ function callJSON(prompt,extra){
   ctl=new AbortController(); status('Thinking…',true);
   return callAI([{role:'user',content:prompt}],{json:true,signal:ctl.signal,image:extra&&extra.images}).then(function(t){ctl=null;return parseJSONLoose(t)},function(e){ctl=null;throw e});
 }
+function studyText(s,n){return String(s.notes||s.summary||s.source||'').slice(0,n)}
+function tutorCtx(s){var n=String(s.notes||s.summary||''),o=s.source&&s.notes?'\n\nOriginal source (for extra detail):\n'+s.source:(s.source&&!n?s.source:'');return (n+o).slice(0,22000)}
 function cleanCards(a){return (Array.isArray(a)?a:[]).filter(function(x){return x&&typeof x.q==='string'&&typeof x.a==='string'&&x.q.trim()&&x.a.trim()}).slice(0,40).map(function(x){return newCard(x.q.trim().slice(0,300),x.a.trim().slice(0,500))})}
 function cleanQuiz(a){return (Array.isArray(a)?a:[]).filter(function(x){return x&&typeof x.q==='string'&&Array.isArray(x.options)&&x.options.length===4&&x.options.every(function(o){return typeof o==='string'})&&Number.isInteger(x.answer)&&x.answer>=0&&x.answer<4}).slice(0,20).map(function(x){return {q:x.q.slice(0,300),options:x.options.map(function(o){return o.slice(0,200)}),answer:x.answer,why:String(x.why||'').slice(0,300)}})}
 var CARD_SHAPE='{"q": "question", "a": "short answer, at most 25 words"}';
 var QUIZ_SHAPE='{"q": "question", "options": ["A","B","C","D"], "answer": 0, "why": "one sentence"} where answer is the index (0-3) of the correct option';
+function callText(prompt,extra){
+  ctl=new AbortController();
+  return callAI([{role:'user',content:prompt}],{signal:ctl.signal,image:extra&&extra.images}).then(function(t){ctl=null;return t},function(e){ctl=null;throw e});
+}
+function withRetry(fn){
+  return fn().catch(function(e){
+    var c=e&&e.code;
+    if(c==='cancelled'||c==='session_expired'||c==='rate_limited'||c==='bad_key'||c==='not_configured'||c==='prompt_too_large'||c==='image_rejected')throw e;
+    return new Promise(function(r){setTimeout(r,1500)}).then(fn);
+  });
+}
+function chunkText(t,size){
+  var out=[],cur='';
+  String(t).split('\n').forEach(function(line){
+    while(line.length>size){if(cur){out.push(cur);cur=''}out.push(line.slice(0,size));line=line.slice(size)}
+    if(cur.length+line.length+1>size&&cur){out.push(cur);cur=''}
+    cur+=(cur?'\n':'')+line;
+  });
+  if(cur)out.push(cur);
+  return out.length?out:[''];
+}
+var DETAIL={concise:'Keep it concise: only the most important points, roughly one fifth of the source length.',standard:'Cover everything a student needs for an exam, roughly one third of the source length.',detailed:'Be thorough and keep supporting detail, examples and values, roughly half of the source length.'};
+function notesPrompt(chunk,i,n,o){
+  return 'Turn '+(n>1?'part '+(i+1)+' of '+n+' of ':'')+'the '+(o.lecture?'lecture transcript':'study material')+' below into smart study notes in Markdown.\n\nRules:\n'+
+  '- Use only what the source says. Do not invent facts, values or examples.\n'+
+  '- Organise by topic: ## for main topics and ### for subtopics, in the order the source teaches them. Never use a single # heading.\n'+
+  '- Under each heading write short bullet points in plain language, one idea per bullet. Put **bold** on key terms and write definitions as "**Term**: meaning".\n'+
+  '- Keep numbers, units, reference ranges, formulas, steps and lists exact. Write steps as a numbered list. Do not use tables.\n'+
+  '- Where the source stresses something, warns about a common mistake or gives a memory trick, add a line starting with "> " as a callout.\n'+
+  '- Drop filler, repeated headers and footers, page or slide markers, greetings and off-topic chatter. Do not copy long passages word for word; rewrite them clearly.\n'+
+  (o.lecture?'- This is a spoken transcript, so fix misheard words where the meaning is obvious and merge repeated points.\n':'')+
+  '- '+(DETAIL[o.detail]||DETAIL.standard)+'\n'+
+  (n>1&&i<n-1?'- This is only one part: write no introduction, summary or conclusion.\n':'- Finish with a "## Key terms" section listing the main terms with one-line meanings.\n')+
+  '- Reply with only the Markdown notes.\n\nSource:\n'+(chunk||'(the source is in the attached image)');
+}
+function stripFence(t){t=String(t).trim();var m=t.match(/^```(?:markdown|md)?\s*\n([\s\S]*?)\n```$/);return (m?m[1]:t).trim()}
+function smartNotes(src,o){
+  var size=12000,n=Math.ceil(src.length/size);if(n>8)size=Math.ceil(src.length/8)+400;
+  var ch=chunkText(src,size),out=[],i=0;
+  function next(){
+    if(i>=ch.length)return Promise.resolve(out.join('\n\n'));
+    var k=i++;
+    status('Writing smart notes'+(ch.length>1?' (part '+(k+1)+' of '+ch.length+')':'')+'…',true);
+    return withRetry(function(){return callText(notesPrompt(ch[k],k,ch.length,o),{images:k===0?o.image:null})}).then(function(t){out.push(stripFence(t));return next()});
+  }
+  return next();
+}
+function cardsPrompt(notes){
+  return 'You are building study material for a university student from the notes below. Use only what the notes say.\nReply with only one JSON object:\n{"title": "short set title, at most 6 words", "cards": [ '+CARD_SHAPE+' ] (15 to 25 flashcards, one idea each, covering the whole notes), "quiz": [ '+QUIZ_SHAPE+' ] (8 to 10 multiple-choice questions with believable wrong options)}\n\nNotes:\n'+notes.slice(0,28000);
+}
+function sourceText(){
+  var typed=(($('#nn')||{}).value||'').trim(),parts=[];
+  SRC.forEach(function(f){parts.push('=== '+f.name+' ===\n'+f.text)});
+  if(typed)parts.push((SRC.length?'=== Typed notes ===\n':'')+typed);
+  return parts.join('\n\n').slice(0,120000);
+}
+function genError(e){if(e&&e.code==='cancelled'){status('Stopped.');return}status('');var el=$('#aistatus');if(el)el.innerHTML='<p class="err">'+esc(aiErr(e))+'</p>'}
 function onGen(withAI){
-  var title=($('#nt').value||'').trim(), text=($('#nn').value||'').trim().slice(0,30000), lecture=(document.querySelector('input[name=nmode]:checked')||{}).value==='lecture';
+  var title=($('#nt').value||'').trim(), text=sourceText(), lecture=(document.querySelector('input[name=nmode]:checked')||{}).value==='lecture', detail=($('#ndetail')||{}).value||'standard';
   if(!withAI){
     if(!title&&!text){status('Add a title or some notes first.');return}
-    var s={id:uid(),title:title||'Untitled set',created:Date.now(),summary:'',notes:text,cards:[],quiz:[],best:{}};
-    S.sets.unshift(s);persist();V={name:'set',setId:s.id,tab:'cards'};render();return;
+    var s0={id:uid(),title:title||'Untitled set',created:Date.now(),summary:'',notes:text.slice(0,40000),source:'',cards:[],quiz:[],best:{}};
+    S.sets.unshift(s0);persist();V={name:'set',setId:s0.id,tab:'notes'};render();return;
   }
-  if(!text&&!pendingImg){status('Paste some notes or add a file first.');return}
-  var prompt='You are building study material for a university student. '+(text?'Use the notes below.':'The notes are in the attached image; read them first.')+(lecture?' The text is a raw lecture transcript with filler words and possible transcription errors, so first tidy it into organised study notes.':'')+' Use only what the notes say and do not invent facts.\nReply with only one JSON object:\n{"title": "short set title, at most 6 words", "summary": "clear study notes in plain text, short lines starting with \\"- \\", at most 300 words", "cards": [ '+CARD_SHAPE+' ] (12 to 20 flashcards, one idea each), "quiz": [ '+QUIZ_SHAPE+' ] (8 multiple-choice questions)}\n'+(text?'\nNotes:\n'+text.slice(0,30000):'');
-  var extra=pendingImg?{images:pendingImg}:{};
-  callJSON(prompt,extra).then(function(r){
-    var cards=cleanCards(r&&r.cards), quiz=cleanQuiz(r&&r.quiz);
-    if(!cards.length&&!quiz.length){status('');$('#aistatus').innerHTML='<p class="err">Claude did not return usable cards. Try again with more detailed notes.</p>';return}
-    var s={id:uid(),title:title||String((r&&r.title)||'New set').slice(0,60),created:Date.now(),summary:String((r&&r.summary)||'').slice(0,3000),notes:text,cards:cards,quiz:quiz,best:{}};
-    S.sets.unshift(s);pendingImg=null;persist();V={name:'set',setId:s.id,tab:'cards'};render();
-  }).catch(function(e){if(e&&e.code==='cancelled'){status('Stopped.');return}status('');var el=$('#aistatus');if(el)el.innerHTML='<p class="err">'+esc(aiErr(e))+'</p>'});
+  if(reading>0){status('Still reading your file. Give it a moment.');return}
+  if(!text&&!pendingImg){status('Add a file or paste some notes first.');return}
+  var img=pendingImg, notes='';
+  smartNotes(text,{lecture:lecture,detail:detail,image:img}).then(function(n){
+    notes=n;
+    if(!notes.trim())throw {code:'empty_completion'};
+    status('Making flashcards and a quiz…',true);
+    return withRetry(function(){return callJSON(cardsPrompt(notes))}).then(function(r){return {r:r}},function(e){if(e&&e.code==='cancelled')throw e;return {err:e}});
+  }).then(function(x){
+    var r=x.r||{}, cards=cleanCards(r.cards), quiz=cleanQuiz(r.quiz);
+    var first=(notes.match(/^#{2,3}\s+(.+)$/m)||[])[1];
+    var s={id:uid(),title:title||String(r.title||first||'New set').slice(0,60),created:Date.now(),summary:'',notes:notes.slice(0,40000),source:text.slice(0,50000),smart:true,cards:cards,quiz:quiz,best:{}};
+    S.sets.unshift(s);pendingImg=null;SRC=[];persist();V={name:'set',setId:s.id,tab:'notes'};render();
+    if(!cards.length&&!quiz.length)status('Your notes are ready, but flashcards and the quiz did not come back'+(x.err?' ('+aiErr(x.err)+')':'')+'. Press More flashcards or New quiz to try again.');
+  }).catch(genError);
+}
+function redoNotes(s){
+  var src=(s.source||s.notes||'').trim();
+  if(!src){status('Add some text first.');return}
+  var detail=($('#ndetail')||{}).value||'standard';
+  smartNotes(src,{lecture:false,detail:detail}).then(function(n){
+    if(!n.trim())throw {code:'empty_completion'};
+    if(!s.source)s.source=s.notes.slice(0,50000);
+    s.notes=n.slice(0,40000);s.smart=true;V.editNotes=false;persist();render(true);status('Smart notes ready.');
+  }).catch(genError);
 }
 function moreCards(s){
   var have=s.cards.map(function(c){return c.q}).join('\n').slice(0,4000);
-  var p='From the notes below, write 10 NEW flashcards that do not repeat these existing questions:\n'+have+'\n\nUse only what the notes say. Reply with only a JSON array of objects like '+CARD_SHAPE+'.\n\nNotes:\n'+(s.notes||s.summary).slice(0,12000);
+  var p='From the notes below, write 10 NEW flashcards that do not repeat these existing questions:\n'+have+'\n\nUse only what the notes say. Reply with only a JSON array of objects like '+CARD_SHAPE+'.\n\nNotes:\n'+studyText(s,12000);
   callJSON(p).then(function(r){var n=cleanCards(r);s.cards=s.cards.concat(n);persist();status(n.length+' cards added.');}).catch(function(e){if(e&&e.code==='cancelled'){status('Stopped.');return}status('');var el=$('#aistatus');if(el)el.innerHTML='<p class="err">'+esc(aiErr(e))+'</p>'});
 }
 function newQuiz(s){
-  var p='Write 8 multiple-choice questions from the notes below. Use only what the notes say. Reply with only a JSON array of objects like '+QUIZ_SHAPE+'.\n\nNotes:\n'+(s.notes||s.summary).slice(0,12000);
+  var p='Write 8 multiple-choice questions from the notes below. Use only what the notes say. Reply with only a JSON array of objects like '+QUIZ_SHAPE+'.\n\nNotes:\n'+studyText(s,12000);
   callJSON(p).then(function(r){var q=cleanQuiz(r);if(!q.length){status('');$('#aistatus').innerHTML='<p class="err">No usable questions came back. Try again.</p>';return}s.quiz=q;Z=null;persist();status(q.length+' questions ready. Open the Quiz tab.')}).catch(function(e){if(e&&e.code==='cancelled'){status('Stopped.');return}status('');var el=$('#aistatus');if(el)el.innerHTML='<p class="err">'+esc(aiErr(e))+'</p>'});
 }
 function sendTutor(text){
   var s=byId(V.setId); if(!s||!text.trim())return;
   var h=T[s.id]=T[s.id]||[];
   h.push({role:'user',content:text});
-  var rules='You are a patient study tutor for a university student. Answer using the student’s notes below. If something is not in the notes, say so, then give a short general explanation and label it as outside the notes. Keep answers short and concrete, in short paragraphs or lines starting with "- ". If asked to quiz the student, ask one question at a time and wait for the answer.\n\nSet: '+s.title+'\n\nNotes:\n'+(s.notes||s.summary||'(no notes yet)').slice(0,12000);
+  var rules='You are a patient study tutor for a university student. Answer using the student’s notes below. If something is not in the notes, say so, then give a short general explanation and label it as outside the notes. Keep answers short and concrete, in short paragraphs or lines starting with "- ". If asked to quiz the student, ask one question at a time and wait for the answer.\n\nSet: '+s.title+'\n\nNotes:\n'+(tutorCtx(s)||'(no notes yet)');
   var turns=[{role:'user',content:rules}].concat(h.slice(-12));
   ctl=new AbortController(); render(); status('Thinking…',true);
   callAI(turns,{signal:ctl.signal}).then(function(t){h.push({role:'assistant',content:t});ctl=null;render()}).catch(function(e){
@@ -419,17 +535,26 @@ function vArcade(){
 function vMe(){
   return '<h1>Account</h1><section class="panel"><h3>'+esc((S.profile&&S.profile.name)||'')+'</h3><p class="muted">'+esc((user&&user.email)||'')+(S.profile&&S.profile.course?' · '+esc(S.profile.course):'')+'</p><div class="row"><button class="btn ghost" data-act="editprofile">Edit profile and teaching style</button><button class="btn danger" data-act="logout">Log out</button></div></section><div class="foot muted small"><span id="sync"></span></div>';
 }
+function filesHtml(){
+  var h=SRC.map(function(f,i){return '<div class="fchip"><span>'+esc(f.name)+' <small class="muted">· '+f.text.split(/\s+/).length.toLocaleString()+' words</small></span><button data-act="rmfile" data-i="'+i+'" aria-label="Remove file">×</button></div>'}).join('');
+  if(pendingImg)h+='<div class="fchip"><span>'+esc(pendingImg.name||'Photo')+' <small class="muted">· photo</small></span><button data-act="rmphoto" aria-label="Remove photo">×</button></div>';
+  if(reading)h+='<p class="muted small">Reading '+reading+' file'+(reading>1?'s':'')+'…</p>';
+  if(fileMsg)h+='<p class="err">'+esc(fileMsg)+'</p>';
+  return h;
+}
+function renderFiles(){var el=$('#flist');if(el)el.innerHTML=filesHtml()}
 function vNew(){
-  var acc=imgOK&&imgTypes.length?'.txt,.md,.vtt,.srt,.pdf,text/plain,application/pdf,'+imgTypes.join(','):'.txt,.md,.vtt,.srt,.pdf,text/plain,application/pdf';
-  return '<header class="top"><h1>New set</h1><button class="link" data-act="home">Cancel</button></header>'+
-  '<div class="field"><label for="nt">Title</label><input type="text" id="nt" placeholder="e.g. Clinical chemistry week 3"></div>'+
-  '<div class="field"><label>What are you adding?</label><div class="radio"><label><input type="radio" name="nmode" value="notes" checked> Notes or slides</label><label><input type="radio" name="nmode" value="lecture"> Lecture transcript</label></div></div>'+
-  '<div class="field"><label for="nn">Paste your notes</label><textarea id="nn" rows="9" placeholder="Paste lecture notes or a textbook section. Orbit turns it into a summary, flashcards and a quiz."></textarea></div>'+
-  (recSupported()?'<div class="row"><button type="button" class="btn ghost sm" id="recbtn" data-act="rec">Record a lecture</button></div><div class="muted small" id="recnote"></div>':'<p class="muted small">Live recording needs Chrome or Edge. In other browsers, paste a transcript or use your keyboard’s microphone.</p>')+
-  '<div class="field"><label for="nf">Or add a PDF, text file or transcript (.vtt, .srt)'+(imgOK?', or a photo of your notes':'')+'</label><input type="file" id="nf" accept="'+acc+'"><div id="fname" class="muted small"></div></div>'+
-  '<div class="row"><button class="btn" data-act="gen">Generate with AI</button><button class="btn ghost" data-act="blank">Create empty set</button></div><div id="aistatus"></div>'+
-  '<p class="muted small">Generating uses Orbit’s AI service, with a daily limit for each account.</p>'+
-  '<p class="muted small">Recording turns speech into text with your browser’s speech service. Check the transcript afterwards, as names and technical terms can be misheard.</p>';
+  var acc='.pdf,.docx,.pptx,.txt,.md,.vtt,.srt,application/pdf,text/plain'+(imgOK&&imgTypes.length?','+imgTypes.join(','):'');
+  return '<header class="top"><h1>Create a set</h1><button class="link" data-act="home">Cancel</button></header>'+
+  '<div class="field"><label for="nt">Title (optional)</label><input type="text" id="nt" placeholder="e.g. Clinical chemistry week 3"></div>'+
+  '<label class="drop" id="drop">'+ic('upload')+'<b>Upload your notes or slides</b><span class="muted small">PDF, Word, PowerPoint, text or a photo. You can add several files. Tap or drop them here.</span><input type="file" id="nf" accept="'+acc+'" multiple></label>'+
+  '<div class="list" id="flist">'+filesHtml()+'</div>'+
+  '<div class="field"><label for="nn">Or paste or type notes</label><textarea id="nn" rows="6" placeholder="Paste lecture notes or a textbook section."></textarea></div>'+
+  (recSupported()?'<div class="row"><button type="button" class="btn ghost sm" id="recbtn" data-act="rec">'+ic('mic')+' Record a lecture</button></div><div class="muted small" id="recnote"></div>':'<p class="muted small">Live recording needs Chrome or Edge. In other browsers, paste a transcript or use your keyboard’s microphone.</p>')+
+  '<div class="row"><div class="field" style="flex:1;min-width:180px"><label for="ndetail">How detailed should the notes be?</label><select id="ndetail" style="width:100%"><option value="concise">Concise</option><option value="standard" selected>Standard</option><option value="detailed">Detailed</option></select></div></div>'+
+  '<div class="field"><label>What are you adding?</label><div class="radio"><label><input type="radio" name="nmode" value="notes" checked> Notes or slides</label><label><input type="radio" name="nmode" value="lecture"> Lecture recording or transcript</label></div></div>'+
+  '<div class="row"><button class="btn" data-act="gen">Make smart notes, cards and quiz</button><button class="btn ghost" data-act="blank">Create empty set</button></div><div id="aistatus"></div>'+
+  '<p class="muted small">Your upload is kept as the original source. Orbit writes organised notes from it, then builds flashcards and a quiz from those notes. Long files are done in parts, so give it a minute. AI use has a daily limit for each account.</p>';
 }
 function vSet(){
   var s=byId(V.setId); if(!s){V={name:'home'};return vHome()}
@@ -439,9 +564,18 @@ function vSet(){
   '<div class="tools" role="tablist">'+tabs.map(function(t){return '<button role="tab" data-act="tab" data-tab="'+t[0]+'" aria-selected="'+(V.tab===t[0])+'">'+ic(t[2])+t[1]+'</button>'}).join('')+'</div>'+body;
 }
 function tNotes(s){
-  return (s.summary?'<section class="panel"><h3>Study summary</h3><div class="prose">'+md(s.summary)+'</div></section>':'')+
-  '<div class="field"><label for="notes">Your notes</label><textarea id="notes" rows="10" placeholder="Paste or type notes here. The tutor and the AI tools read these.">'+esc(s.notes)+'</textarea></div>'+
-  '<div class="row"><button class="btn" data-act="morecards">More flashcards</button><button class="btn ghost" data-act="newquiz">New quiz</button></div><div id="aistatus"></div>'+
+  var has=!!(s.notes&&s.notes.trim()), edit=V.editNotes||!has, src=(s.source||'').trim();
+  var legacy=s.summary&&!s.smart?'<section class="panel"><h3>Study summary</h3><div class="prose">'+md(s.summary)+'</div></section>':'';
+  var main;
+  if(edit){
+    main='<div class="field"><label for="notes">'+(has?'Edit your notes':'Your notes')+'</label><textarea id="notes" rows="14" placeholder="Paste or type notes here, then press Make smart notes.">'+esc(s.notes)+'</textarea></div>'+(has?'<div class="row"><button class="btn sm" data-act="notesdone">Done editing</button></div>':'');
+  }else{
+    main='<section class="panel"><div class="row" style="justify-content:space-between"><h3>'+(s.smart?'Smart notes':'Your notes')+'</h3><div class="row"><button class="btn ghost sm" data-act="editnotes">Edit</button><button class="btn ghost sm" data-act="copynotes">Copy</button></div></div><div class="prose">'+md(s.notes)+'</div></section>';
+  }
+  var srcBox=src?'<details class="panel"><summary>Original upload · '+src.split(/\s+/).length.toLocaleString()+' words</summary><pre class="srcbox script" style="max-height:340px">'+esc(src.slice(0,20000))+(src.length>20000?'\n\n… (showing the first part)':'')+'</pre></details>':'';
+  return legacy+main+
+  '<section class="panel"><h3>Make more from these notes</h3><div class="row"><select id="ndetail" aria-label="Detail" style="min-width:150px"><option value="concise">Concise</option><option value="standard" selected>Standard</option><option value="detailed">Detailed</option></select><button class="btn" data-act="smartnotes">'+(s.smart?'Redo smart notes':'Make smart notes')+'</button></div><div class="row"><button class="btn ghost" data-act="morecards">More flashcards</button><button class="btn ghost" data-act="newquiz">New quiz</button></div><div id="aistatus"></div></section>'+
+  srcBox+
   '<div class="row">'+(V.confirmDel?'<button class="btn danger" data-act="delset">Tap again to delete this set</button><button class="link" data-act="canceldel">Keep it</button>':'<button class="btn danger sm" data-act="delask">Delete set</button>')+'</div>'+
   '<div class="foot muted small"><span id="sync"></span></div>';
 }
@@ -531,35 +665,151 @@ function tMatch(s){
   return '<div class="row" style="justify-content:space-between"><span class="mono" id="mtime">'+(el/1000).toFixed(1)+'s</span><button class="link" data-act="mstart">Restart</button></div>'+
   (M.done?'<section class="panel"><h3>Cleared in '+(el/1000).toFixed(1)+'s</h3>'+(s.best.match?'<p class="muted mono">Best: '+(s.best.match/1000).toFixed(1)+'s</p>':'')+'</section>':'')+'<div class="tiles">'+tiles+'</div>';
 }
-var AU={sid:null,idx:0,playing:false,paused:false,rate:1,token:0,segs:[]};
+var AU={sid:null,idx:0,playing:false,paused:false,rate:1,token:0,segs:[],mode:'device',chunks:null,audio:null,note:'',aiBroken:false};
 function segsOf(a){var out=[];a.items.forEach(function(it){var parts=String(it.text).match(/[^.!?]+[.!?]*\s*/g)||[String(it.text)];var cur='';parts.forEach(function(p){if((cur+p).length>200&&cur){out.push({w:it.who,t:cur.trim()});cur=p}else cur+=p});if(cur.trim())out.push({w:it.who,t:cur.trim()})});return out}
-function pickVoice(w){var vs=(window.speechSynthesis.getVoices()||[]).filter(function(v){return /^en/i.test(v.lang)});if(!vs.length)return null;return w==='B'&&vs.length>1?vs[1]:vs[0]}
+function enVoices(){var vs=[];try{vs=window.speechSynthesis.getVoices()||[]}catch(e){}return vs.filter(function(v){return /^en/i.test(v.lang)})}
+function vScore(v){
+  var n=v.name+' '+v.voiceURI,sc=0;
+  if(/natural|neural/i.test(n))sc+=60; if(/online/i.test(n))sc+=25; if(/premium|enhanced/i.test(n))sc+=40; if(/google/i.test(n))sc+=30;
+  if(/aria|jenny|sonia|libby|ryan|guy|davis|emma|ava|andrew|brian|samantha|serena|daniel|karen|moira|tessa|zoe|allison|susan|evan|nicky/i.test(n))sc+=12;
+  if(v.localService===false)sc+=8;
+  if(/espeak|compact|novelty|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|organ|trinoids|whisper|zarvox|albert|fred|junior|kathy|ralph|superstar/i.test(n))sc-=80;
+  if(/en[-_]?(US|GB|AU|IE|ZA|IN|NG|GH)/i.test(v.lang))sc+=4;
+  return sc;
+}
+function rankedVoices(){return enVoices().slice().sort(function(a,b){return vScore(b)-vScore(a)})}
+function savedVoice(k){try{return localStorage.getItem('orbit.voice'+k)}catch(e){return null}}
+function saveVoice(k,u){try{localStorage.setItem('orbit.voice'+k,u)}catch(e){}}
+function pickVoice(w){
+  var r=rankedVoices();if(!r.length)return null;
+  var k=w==='B'?'B':'A',u=savedVoice(k),f=u&&r.filter(function(v){return v.voiceURI===u})[0];
+  if(f)return f;
+  if(k==='A')return r[0];
+  var a=pickVoice('A');return r.filter(function(v){return v!==a})[0]||r[0];
+}
+function previewVoice(w){
+  try{window.speechSynthesis.cancel()}catch(e){}
+  AU.token++;AU.playing=false;AU.paused=false;
+  var u=new SpeechSynthesisUtterance(w==='B'?'And I will ask the questions you were thinking of.':'Hi, I am your Orbit teacher. Let us go through this together.'),v=pickVoice(w);
+  if(v){u.voice=v;u.lang=v.lang}u.rate=AU.rate;window.speechSynthesis.speak(u);
+}
+try{if(window.speechSynthesis)window.speechSynthesis.onvoiceschanged=function(){if(V.name==='set'&&V.tab==='audio'&&!AU.playing)render(true)}}catch(e){}
+
+/* ---------- natural voice (Gemini text-to-speech through /api/tts) ---------- */
+var AIV=[['Sulafat','Warm'],['Achird','Friendly'],['Kore','Firm'],['Charon','Informative'],['Vindemiatrix','Gentle'],['Sadaltager','Knowledgeable'],['Aoede','Breezy'],['Puck','Upbeat'],['Zephyr','Bright'],['Gacrux','Mature']];
+function engine(){try{return localStorage.getItem('orbit.engine')||'ai'}catch(e){return 'ai'}}
+function setEngine(v){try{localStorage.setItem('orbit.engine',v)}catch(e){}}
+function aiVoice(k){var u=null;try{u=localStorage.getItem('orbit.aiv'+k)}catch(e){}return AIV.some(function(x){return x[0]===u})?u:(k==='B'?'Puck':'Sulafat')}
+function setAiVoice(k,v){try{localStorage.setItem('orbit.aiv'+k,v)}catch(e){}}
+function blobUrl(b64,mime){var bin=atob(b64),n=bin.length,u=new Uint8Array(n);for(var i=0;i<n;i++)u[i]=bin.charCodeAt(i);return URL.createObjectURL(new Blob([u],{type:mime||'audio/wav'}))}
+function ttsFetch(body){
+  return sb.auth.getSession().then(function(r){
+    var se=r.data&&r.data.session;if(!se)throw {code:'session_expired'};
+    return fetch('/api/tts',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+se.access_token},body:JSON.stringify(body)});
+  }).then(function(res){
+    return res.json().catch(function(){return null}).then(function(b){
+      if(!b)throw {code:res.status===504?'timeout':'upstream_error',detail:'HTTP '+res.status};
+      if(!res.ok)throw {code:b.error||'upstream_error',detail:b.detail};
+      return b;
+    });
+  }).catch(function(e){if(e&&e.code)throw e;throw {code:'network'}});
+}
+function pieces(text,max){
+  var parts=String(text).match(/[^.!?]+[.!?]*\s*/g)||[String(text)],out=[],cur='';
+  parts.forEach(function(p){while(p.length>max){if(cur){out.push(cur.trim());cur=''}out.push(p.slice(0,max));p=p.slice(max)}if((cur+p).length>max&&cur){out.push(cur.trim());cur=p}else cur+=p});
+  if(cur.trim())out.push(cur.trim());
+  return out;
+}
+function aiChunks(a){
+  var out=[];
+  if(a.style==='podcast'){
+    var lines=[];a.items.forEach(function(it,i){pieces(it.text,600).forEach(function(t){lines.push({item:i,who:it.who,text:t})})});
+    var cur=[],len=0;
+    function flush(){if(cur.length)out.push({item:cur[0].item,p:null,body:{mode:'duo',lines:cur.map(function(l){return {who:l.who,text:l.text}}),voiceA:aiVoice('A'),voiceB:aiVoice('B')}});cur=[];len=0}
+    lines.forEach(function(l){if(cur.length&&(len+l.text.length>600||cur.length>=6))flush();cur.push(l);len+=l.text.length});
+    flush();
+  }else{
+    a.items.forEach(function(it,i){pieces(it.text,600).forEach(function(t){out.push({item:i,p:null,body:{text:t,voice:aiVoice('A')}})})});
+  }
+  return out;
+}
+function aiGet(k){
+  var c=AU.chunks&&AU.chunks[k];if(!c)return Promise.reject({code:'upstream_error'});
+  if(c.p)return c.p;
+  var pr=ttsFetch(c.body).then(function(b){return blobUrl(b.audio,b.mime)});
+  c.p=pr;pr.catch(function(){if(c.p===pr)c.p=null});
+  return pr;
+}
+function setPos(t){var e=$('#apos');if(e)e.textContent=t}
+function aiPlayFrom(k){
+  var tok=AU.token;
+  if(!AU.chunks||k>=AU.chunks.length){AU.playing=false;AU.paused=false;AU.idx=0;AU.audio=null;if(V.name==='set'&&V.tab==='audio')render(true);return}
+  AU.idx=k;AU.audio=null;setPos('Preparing the voice…');
+  aiGet(k).then(function(url){
+    if(tok!==AU.token)return;
+    if(AU.chunks[k+1])aiGet(k+1).catch(function(){});
+    var el=new Audio(url);el.playbackRate=AU.rate;AU.audio=el;
+    el.onended=function(){if(tok===AU.token&&AU.playing&&!AU.paused)aiPlayFrom(k+1)};
+    el.onerror=function(){if(tok===AU.token)aiFallback({code:'upstream_error',detail:'the audio could not be played'},k)};
+    setPos('Part '+(k+1)+' of '+AU.chunks.length);
+    var pr=el.play();if(pr&&pr.catch)pr.catch(function(){if(tok===AU.token)aiFallback({code:'upstream_error',detail:'your browser blocked the audio'},k)});
+  }).catch(function(e){if(tok===AU.token)aiFallback(e,k)});
+}
+function aiFallback(e,k){
+  var s=byId(AU.sid);if(!s||!s.audio)return;
+  var item=(AU.chunks&&AU.chunks[k]&&AU.chunks[k].item)||0;
+  AU.token++;if(AU.audio){try{AU.audio.pause()}catch(x){}AU.audio=null}
+  var why=e&&e.code==='tts_unavailable'?'the natural voice is not available right now'+(e.detail?' ('+e.detail+')':''):aiErr(e);
+  if(e&&e.code==='tts_unavailable')AU.aiBroken=true;
+  AU.mode='device';AU.note='Using your device voice because '+why.replace(/\.$/,'')+'.';
+  if(!('speechSynthesis' in window)){AU.playing=false;AU.paused=false;render(true);return}
+  AU.segs=segsOf({items:s.audio.items.slice(item)});AU.idx=0;AU.playing=true;AU.paused=false;
+  render(true);setTimeout(function(){speakFrom(0)},80);
+}
+function aiPreview(w){
+  stopAudio();
+  var tok=AU.token;status('Loading the voice…');
+  ttsFetch({text:w==='B'?'And I will ask the questions you were thinking of.':'Hi, I am your Orbit teacher. Let us go through this together.',voice:aiVoice(w==='B'?'B':'A')}).then(function(b){
+    status('');if(tok!==AU.token)return;
+    var el=new Audio(blobUrl(b.audio,b.mime));AU.audio=el;el.playbackRate=AU.rate;el.play().catch(function(){});
+  }).catch(function(e){status('');var el=$('#aistatus');if(el)el.innerHTML='<p class="err">'+esc(e&&e.code==='tts_unavailable'?'The natural voice is not available right now'+(e.detail?' ('+esc(e.detail)+')':'')+'. Pick Device voice instead.':aiErr(e))+'</p>'});
+}
 function speakFrom(i){
   var tok=AU.token;
   if(i>=AU.segs.length){AU.playing=false;AU.paused=false;AU.idx=0;if(V.name==='set'&&V.tab==='audio')render(true);return}
-  AU.idx=i;var seg=AU.segs[i],u=new SpeechSynthesisUtterance(seg.t);u.rate=AU.rate;u.pitch=seg.w==='B'?1.15:1;
-  var v=pickVoice(seg.w);if(v){u.voice=v;u.lang=v.lang}
+  AU.idx=i;var seg=AU.segs[i],u=new SpeechSynthesisUtterance(seg.t);u.rate=AU.rate;u.pitch=1;
+  var v=pickVoice(seg.w);if(v){u.voice=v;u.lang=v.lang;if(seg.w==='B'&&v===pickVoice('A'))u.pitch=1.15}
   u.onend=function(){if(tok===AU.token&&AU.playing&&!AU.paused)speakFrom(i+1)};
   var p=$('#apos');if(p)p.textContent='Part '+(i+1)+' of '+AU.segs.length;
   window.speechSynthesis.speak(u);
 }
-function stopAudio(){AU.token++;AU.playing=false;AU.paused=false;try{if(window.speechSynthesis)window.speechSynthesis.cancel()}catch(e){}}
+function stopAudio(){AU.token++;AU.playing=false;AU.paused=false;if(AU.audio){try{AU.audio.pause()}catch(e){}AU.audio=null}try{if(window.speechSynthesis)window.speechSynthesis.cancel()}catch(e){}}
 function tAudio(s){
-  if(!('speechSynthesis' in window))return '<p class="muted">This browser cannot read text aloud.</p>';
   var a=s.audio, mine=AU.sid===s.id, playing=AU.playing&&mine;
   var gen='<section class="panel"><h3>Make an audio lesson</h3><div class="radio"><label><input type="radio" name="astyle" value="lesson"'+((!a||a.style==='lesson')?' checked':'')+'> Lesson, one voice</label><label><input type="radio" name="astyle" value="podcast"'+((a&&a.style==='podcast')?' checked':'')+'> Podcast, two voices</label></div><div class="row"><button class="btn" data-act="audiogen">'+(a?'Make a new one':'Generate with AI')+'</button></div><div id="aistatus"></div></section>';
-  if(!a)return gen+'<p class="muted small">Orbit writes a script from your notes and your phone reads it aloud. Playing it is free and unlimited.</p>';
+  var rv=rankedVoices(),pod=a&&a.style==='podcast',vp='',useAI=engine()==='ai'&&!AU.aiBroken;
+  function vopt(sel){return rv.map(function(v){return '<option value="'+esc(v.voiceURI)+'"'+(sel&&sel.voiceURI===v.voiceURI?' selected':'')+'>'+(vScore(v)>=55?'★ ':'')+esc(v.name.replace(/^Microsoft\s+/,''))+' ('+esc(v.lang)+')</option>'}).join('')}
+  function aopt(k){return AIV.map(function(x){return '<option value="'+x[0]+'"'+(aiVoice(k)===x[0]?' selected':'')+'>'+x[0]+' · '+x[1]+'</option>'}).join('')}
+  var eng='<div class="radio"><label><input type="radio" name="aeng" value="ai"'+(useAI?' checked':'')+'> Natural AI voice</label><label><input type="radio" name="aeng" value="device"'+(useAI?'':' checked')+'> Device voice</label></div>';
+  if(useAI){
+    vp='<section class="panel"><h3>Voice</h3>'+eng+'<div class="field"><label for="aA">'+(pod?'Alex':'Teacher')+'</label><div class="row"><select id="aA" style="flex:1;min-width:200px">'+aopt('A')+'</select><button class="btn ghost sm" data-act="aprev" data-w="A">Hear it</button></div></div>'+(pod?'<div class="field"><label for="aB">Sam</label><div class="row"><select id="aB" style="flex:1;min-width:200px">'+aopt('B')+'</select><button class="btn ghost sm" data-act="aprev" data-w="B">Hear it</button></div></div>':'')+'<p class="muted small">Natural voices are made by AI, so they sound like a real person. Each part takes a few seconds to prepare and counts toward your daily AI limit. Changing the voice applies the next time you press Play.</p></section>';
+  }else if(rv.length){
+    vp='<section class="panel"><h3>Voice</h3>'+eng+'<div class="field"><label for="vA">'+(pod?'Alex':'Teacher')+'</label><div class="row"><select id="vA" style="flex:1;min-width:200px">'+vopt(pickVoice('A'))+'</select><button class="btn ghost sm" data-act="vprev" data-w="A">Hear it</button></div></div>'+(pod?'<div class="field"><label for="vB">Sam</label><div class="row"><select id="vB" style="flex:1;min-width:200px">'+vopt(pickVoice('B'))+'</select><button class="btn ghost sm" data-act="vprev" data-w="B">Hear it</button></div></div>':'')+'<p class="muted small">Device voices are free and unlimited. ★ marks the most natural ones on this device. On Chrome or Edge, voices with Natural or Online in the name sound best.</p></section>';
+  }else{
+    vp='<section class="panel"><h3>Voice</h3>'+eng+'<p class="muted small">This device has no voices to choose from. Use the natural AI voice.</p></section>';
+  }
+  if(!a)return vp+gen+'<p class="muted small">Orbit writes a script from your notes and your device reads it aloud. Playing it is free and unlimited.</p>';
   var n=segsOf(a).length;
   var pos=mine&&(AU.playing||AU.paused)?'Part '+(AU.idx+1)+' of '+n:n+' parts';
-  var ctrl='<section class="panel"><h3>'+(a.style==='podcast'?'Podcast':'Lesson')+' ready</h3><div class="row">'+(playing?'<button class="btn" data-act="apause">Pause</button>':'<button class="btn" data-act="aplay">'+(mine&&AU.paused?'Resume':'Play')+'</button>')+'<button class="btn ghost" data-act="astop">Stop</button><select id="arate" aria-label="Speed"><option value="0.85">0.85x</option><option value="1">1x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option></select></div><div class="muted small mono" id="apos">'+pos+'</div></section>';
+  var ctrl='<section class="panel"><h3>'+(a.style==='podcast'?'Podcast':'Lesson')+' ready</h3><div class="row">'+(playing?'<button class="btn" data-act="apause">Pause</button>':'<button class="btn" data-act="aplay">'+(mine&&AU.paused?'Resume':'Play')+'</button>')+'<button class="btn ghost" data-act="astop">Stop</button><select id="arate" aria-label="Speed"><option value="0.85">0.85x</option><option value="1">1x</option><option value="1.25">1.25x</option><option value="1.5">1.5x</option></select></div><div class="muted small mono" id="apos">'+pos+'</div>'+(AU.note?'<p class="muted small">'+esc(AU.note)+'</p>':'')+'</section>';
   var script='<section class="panel"><h3>Script</h3><div class="script prose">'+a.items.map(function(i){return '<p>'+(a.style==='podcast'?'<strong>'+(i.who==='B'?'Sam':'Alex')+':</strong> ':'')+esc(i.text)+'</p>'}).join('')+'</div></section>';
-  return gen+ctrl+script;
+  return vp+gen+ctrl+script;
 }
 function genAudio(s){
-  if(!(s.notes||s.summary)){status('Add some notes first.');return}
+  if(!studyText(s,1)){status('Add some notes first.');return}
   var style=(document.querySelector('input[name=astyle]:checked')||{}).value||'lesson';
   var spec=style==='podcast'?'a two-host podcast. Alex is host "A" and explains; Sam is host "B" and asks curious questions. Alternate turns.':'a spoken audio lesson by one teacher, who is always "A".';
-  var p='Write '+spec+' It should teach the notes below to a student in about 700 words, roughly five minutes. Use plain spoken English: short sentences, no markdown, no lists, no headings, and spell out abbreviations the first time. Use only what the notes say.\nReply with only a JSON array of objects like {"who":"A","text":"one or two spoken paragraphs"}.\n\nNotes:\n'+(s.notes||s.summary).slice(0,12000);
+  var p='Write '+spec+' It should teach the notes below to a student in about 700 words, roughly five minutes. Use plain spoken English: short sentences, no markdown, no lists, no headings, and spell out abbreviations the first time. Use only what the notes say.\nReply with only a JSON array of objects like {"who":"A","text":"one or two spoken paragraphs"}.\n\nNotes:\n'+studyText(s,12000);
   callJSON(p).then(function(r){
     var items=(Array.isArray(r)?r:[]).filter(function(x){return x&&typeof x.text==='string'&&x.text.trim()}).slice(0,60).map(function(x){return {who:style==='podcast'&&x.who==='B'?'B':'A',text:x.text.trim().slice(0,1500)}});
     if(!items.length){status('');var e=$('#aistatus');if(e)e.innerHTML='<p class="err">No usable script came back. Try again.</p>';return}
@@ -657,9 +907,16 @@ document.addEventListener('click',function(e){
   var d=b.dataset, s=byId(V.setId), a=d.act;
   if(a==='home'||a==='open'||a==='go'||a==='play'||a==='new'||a==='newrec'||(a==='tab'&&d.tab!=='audio'))stopAudio();
   if(a==='home'){V={name:'home'};Z=null;M=null;G=null;render()}
-  else if(a==='go'){V={name:d.v};Z=null;M=null;G=null;if(d.v==='new')pendingImg=null;render()}
-  else if(a==='new'){V={name:'new'};pendingImg=null;render()}
-  else if(a==='newrec'){V={name:'new'};pendingImg=null;render();startRec()}
+  else if(a==='go'){V={name:d.v};Z=null;M=null;G=null;if(d.v==='new'){pendingImg=null;SRC=[];fileMsg=''}render()}
+  else if(a==='new'){V={name:'new'};pendingImg=null;SRC=[];fileMsg='';render()}
+  else if(a==='newrec'){V={name:'new'};pendingImg=null;SRC=[];fileMsg='';render();startRec()}
+  else if(a==='rmfile'){SRC.splice(+d.i,1);renderFiles()}
+  else if(a==='rmphoto'){pendingImg=null;renderFiles()}
+  else if(a==='editnotes'){V.editNotes=true;render(true)}
+  else if(a==='notesdone'){V.editNotes=false;persist();render(true)}
+  else if(a==='copynotes'&&s){try{navigator.clipboard.writeText(s.notes).then(function(){status('Copied.')},function(){status('Could not copy. Select the text and copy it.')})}catch(x){status('Could not copy. Select the text and copy it.')}}
+  else if(a==='smartnotes'&&s)redoNotes(s);
+  else if(a==='vprev')previewVoice(d.w);
   else if(a==='open'){V={name:'set',setId:d.id,tab:'cards'};Z=null;M=null;G=null;render()}
   else if(a==='play'){V={name:'set',setId:d.id,tab:'arcade'};Z=null;M=null;G=null;render()}
   else if(a==='tab'){V.tab=d.tab;V.confirmDel=false;G=null;M=null;render()}
@@ -677,8 +934,26 @@ document.addEventListener('click',function(e){
   else if(a==='blank')onGen(false);
   else if(a==='stop'){if(ctl)ctl.abort()}
   else if(a==='audiogen'&&s)genAudio(s);
-  else if(a==='aplay'&&s&&s.audio){var resume=AU.sid===s.id&&AU.paused;stopAudio();AU.sid=s.id;AU.segs=segsOf(s.audio);if(!resume)AU.idx=0;AU.playing=true;AU.paused=false;var rt=$('#arate');if(rt)AU.rate=+rt.value;render(true);setTimeout(function(){speakFrom(AU.idx)},80)}
-  else if(a==='apause'){AU.token++;try{window.speechSynthesis.cancel()}catch(x){}AU.playing=false;AU.paused=true;render(true)}
+  else if(a==='aplay'&&s&&s.audio){
+    var resume=AU.sid===s.id&&AU.paused, rt=$('#arate');if(rt)AU.rate=+rt.value;
+    if(resume&&AU.mode==='ai'&&AU.audio&&!AU.audio.ended){AU.playing=true;AU.paused=false;AU.audio.playbackRate=AU.rate;AU.audio.play().catch(function(){});render(true)}
+    else{
+      var keep=resume&&AU.mode==='ai'&&AU.chunks, k0=AU.idx;
+      stopAudio();AU.sid=s.id;AU.note='';
+      var useAI=engine()==='ai'&&!AU.aiBroken&&!!sb;
+      AU.mode=useAI?'ai':'device';
+      if(AU.aiBroken&&engine()==='ai')AU.note='Using your device voice because the natural voice was not available earlier. Reload the page to try it again.';
+      if(!resume)AU.idx=0;
+      AU.playing=true;AU.paused=false;
+      if(useAI){if(!keep)AU.chunks=aiChunks(s.audio);else AU.idx=k0;var k1=AU.idx;render(true);aiPlayFrom(k1)}
+      else{AU.segs=segsOf(s.audio);render(true);setTimeout(function(){speakFrom(AU.idx)},80)}
+    }
+  }
+  else if(a==='aprev'){aiPreview(d.w)}
+  else if(a==='apause'){
+    if(AU.mode==='ai'){if(AU.audio&&!AU.audio.ended){try{AU.audio.pause()}catch(x){}}else{AU.token++}AU.playing=false;AU.paused=true;render(true)}
+    else{AU.token++;try{window.speechSynthesis.cancel()}catch(x){}AU.playing=false;AU.paused=true;render(true)}
+  }
   else if(a==='astop'){stopAudio();AU.idx=0;render(true)}
   else if(a==='welcomesave')saveProfile();
   else if(a==='resetstyle'){var ps=$('#ps');if(ps)ps.value=defStyle()}
@@ -733,13 +1008,93 @@ var PDFB='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
 function readPdf(file){
   var p=window.pdfjsLib?Promise.resolve():loadScript(PDFB+'pdf.min.js').then(function(){return loadScript(PDFB+'pdf.worker.min.js')});
   return p.then(function(){window.pdfjsLib.GlobalWorkerOptions.workerSrc=PDFB+'pdf.worker.min.js';return file.arrayBuffer()}).then(function(buf){return window.pdfjsLib.getDocument({data:buf}).promise}).then(function(doc){
-    var n=Math.min(doc.numPages,80),out='',i=1;
-    function next(){if(i>n||out.length>40000)return Promise.resolve(out);return doc.getPage(i++).then(function(pg){return pg.getTextContent()}).then(function(tc){out+=tc.items.map(function(x){return x.str}).join(' ')+'\n\n';return next()})}
+    var n=Math.min(doc.numPages,150),pages=[],i=1,sizes=[];
+    function next(){
+      if(i>n)return Promise.resolve();
+      var pn=i++;
+      return doc.getPage(pn).then(function(pg){return pg.getTextContent()}).then(function(tc){
+        var rows=[];
+        tc.items.forEach(function(it){
+          if(!it.str)return;
+          if(!it.str.trim()&&!it.hasEOL)return;
+          var y=Math.round(it.transform[5]),h=Math.abs(it.height||it.transform[3]||0),r=null;
+          for(var k=rows.length-1;k>=0&&k>=rows.length-6;k--){if(Math.abs(rows[k].y-y)<=Math.max(2,h*.4)){r=rows[k];break}}
+          if(!r){r={y:y,h:0,parts:[]};rows.push(r)}
+          r.parts.push({x:it.transform[4],s:it.str});if(h>r.h)r.h=h;
+        });
+        rows.sort(function(a,b){return b.y-a.y});
+        var lines=rows.map(function(r){r.parts.sort(function(a,b){return a.x-b.x});return {t:r.parts.map(function(q){return q.s}).join(' ').replace(/\s+/g,' ').trim(),h:r.h}}).filter(function(l){return l.t});
+        lines.forEach(function(l){if(l.t.length>2)sizes.push(l.h)});
+        pages.push(lines);
+      }).then(next);
+    }
+    return next().then(function(){
+      sizes.sort(function(a,b){return a-b});
+      var med=sizes.length?sizes[Math.floor(sizes.length/2)]:0, seen={};
+      pages.forEach(function(ls){var u={};ls.forEach(function(l){var k=l.t.replace(/\d+/g,'#').toLowerCase();if(!u[k]){u[k]=1;seen[k]=(seen[k]||0)+1}})});
+      var rep=pages.length>=4?Math.ceil(pages.length*.5):1e9, out=[];
+      pages.forEach(function(ls,pi){
+        var o=[];
+        ls.forEach(function(l){
+          var k=l.t.replace(/\d+/g,'#').toLowerCase();
+          if(seen[k]>=rep||/^\d{1,3}$/.test(l.t))return;
+          o.push(med&&l.h>=med*1.25&&l.t.length<100?'## '+l.t:l.t);
+        });
+        if(o.length)out.push('--- Page '+(pi+1)+' ---\n'+o.join('\n'));
+      });
+      return out.join('\n\n');
+    });
+  });
+}
+var ZIPJS='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+function openZip(file){return (window.JSZip?Promise.resolve():loadScript(ZIPJS)).then(function(){return file.arrayBuffer()}).then(function(b){return window.JSZip.loadAsync(b)})}
+function parseXml(x){return new DOMParser().parseFromString(x,'application/xml')}
+function paraText(p,run){var t='',els=p.getElementsByTagName('*');for(var i=0;i<els.length;i++){var n=els[i].nodeName;if(n===run)t+=els[i].textContent;else if(n==='w:tab'||n==='w:br'||n==='a:br')t+=' '}return t.replace(/\s+/g,' ').trim()}
+function readDocx(file){
+  return openZip(file).then(function(z){var f=z.file('word/document.xml');if(!f)throw new Error('nodoc');return f.async('string')}).then(function(x){
+    var ps=parseXml(x).getElementsByTagName('w:p'),out=[];
+    for(var i=0;i<ps.length;i++){
+      var t=paraText(ps[i],'w:t');if(!t)continue;
+      var st=ps[i].getElementsByTagName('w:pStyle')[0],sv=st?(st.getAttribute('w:val')||''):'',m=sv.match(/^heading\s?(\d)/i),li=ps[i].getElementsByTagName('w:numPr').length>0;
+      out.push(/^title$/i.test(sv)?'# '+t:m?'###'.slice(0,Math.min(3,+m[1]+1))+' '+t:li?'- '+t:t);
+    }
+    return out.join('\n');
+  });
+}
+function readPptx(file){
+  return openZip(file).then(function(z){
+    var names=Object.keys(z.files).filter(function(n){return /^ppt\/slides\/slide\d+\.xml$/.test(n)}).sort(function(a,b){return +a.match(/(\d+)\.xml/)[1]-+b.match(/(\d+)\.xml/)[1]}),out=[],i=0;
+    function lines(x){var ps=parseXml(x).getElementsByTagName('a:p'),ls=[];for(var k=0;k<ps.length;k++){var t=paraText(ps[k],'a:t');if(t&&!/^\d{1,3}$/.test(t))ls.push(t)}return ls}
+    function next(){
+      if(i>=names.length)return Promise.resolve(out.join('\n\n'));
+      var nm=names[i++],num=nm.match(/(\d+)\.xml/)[1];
+      return z.file(nm).async('string').then(function(x){
+        var ls=lines(x),nf=z.file('ppt/notesSlides/notesSlide'+num+'.xml');
+        return (nf?nf.async('string'):Promise.resolve('')).then(function(nx){
+          var nl=nx?lines(nx):[];
+          if(ls.length||nl.length)out.push('--- Slide '+num+' ---\n'+(ls.length?'## '+ls[0]+'\n'+ls.slice(1).map(function(l){return '- '+l}).join('\n'):'')+(nl.length?'\nSpeaker notes: '+nl.join(' '):''));
+          return next();
+        });
+      });
+    }
     return next();
   });
 }
+var SRC=[], reading=0, fileMsg='';
+function fileNote(t){fileMsg=t;renderFiles()}
+function addFile(f){
+  var nm=f.name||'file', ext=((nm.match(/\.([a-z0-9]+)$/i)||[])[1]||'').toLowerCase(), job;
+  fileMsg='';
+  if(/^image\//.test(f.type)){pendingImg=f;renderFiles();return}
+  if(ext==='pdf'||f.type==='application/pdf')job=readPdf(f);
+  else if(ext==='docx')job=readDocx(f);
+  else if(ext==='pptx')job=readPptx(f);
+  else if(ext==='doc'||ext==='ppt'){fileNote(nm+': old .doc and .ppt files cannot be read. Save it as .docx, .pptx or PDF and add it again.');return}
+  else job=f.text().then(function(t){return /\.(vtt|srt)$/i.test(nm)?cleanSubs(t):t});
+  reading++;renderFiles();
+  job.then(function(t){t=String(t||'').trim();if(t.replace(/\s/g,'').length<40){fileMsg=nm+': no readable text found. If it is scanned, add a photo of the page instead.';return}SRC.push({name:nm,text:t.slice(0,120000)})}).catch(function(){fileMsg='Could not read '+nm+'.'}).then(function(){reading--;renderFiles()});
+}
 function cleanSubs(t){return t.replace(/\r/g,'').split('\n').filter(function(l){l=l.trim();return l&&!/^WEBVTT/.test(l)&&!/^\d+$/.test(l)&&!/-->/.test(l)&&!/^(NOTE|Kind:|Language:)/.test(l)}).map(function(l){return l.replace(/<[^>]+>/g,'')}).join(' ')}
-function addText(t,label,name){var n=$('#nn'),nm=$('#fname');if(n)n.value=(n.value?n.value+'\n\n':'')+t.slice(0,30000);if(nm)nm.textContent=label+': '+name}
 var REC=null, recOn=false, wake=null;
 function recSupported(){return !!(window.SpeechRecognition||window.webkitSpeechRecognition)}
 function recLabel(){var b=$('#recbtn');if(b){b.textContent=recOn?'Stop recording':'Record a lecture';b.classList.toggle('danger',recOn)}var n=$('#recnote');if(n&&recOn)n.textContent='Listening. Keep the screen on and the phone close to the speaker.';else if(n&&!n.dataset.keep)n.textContent=''}
@@ -760,17 +1115,21 @@ function startRec(){
 }
 var noteTimer=null;
 document.addEventListener('input',function(e){
-  if(e.target.id==='notes'){var s=byId(V.setId);if(!s)return;s.notes=e.target.value.slice(0,20000);clearTimeout(noteTimer);noteTimer=setTimeout(persist,700)}
+  if(e.target.id==='notes'){var s=byId(V.setId);if(!s)return;s.notes=e.target.value.slice(0,40000);clearTimeout(noteTimer);noteTimer=setTimeout(persist,700)}
 });
 document.addEventListener('change',function(e){
-  if(e.target.id==='arate'){AU.rate=+e.target.value;return}
+  if(e.target.id==='arate'){AU.rate=+e.target.value;if(AU.audio)AU.audio.playbackRate=AU.rate;return}
+  if(e.target.name==='aeng'){setEngine(e.target.value);AU.aiBroken=false;render(true);return}
+  if(e.target.id==='aA'||e.target.id==='aB'){setAiVoice(e.target.id.slice(1),e.target.value);return}
+  if(e.target.id==='vA'||e.target.id==='vB'){saveVoice(e.target.id.slice(1),e.target.value);return}
   if(e.target.id!=='nf')return;
-  var f=e.target.files&&e.target.files[0]; if(!f)return;
-  var nm=$('#fname');
-  if(/^image\//.test(f.type)){pendingImg=f;if(nm)nm.textContent='Photo added: '+f.name}
-  else if(/\.pdf$/i.test(f.name)||f.type==='application/pdf'){if(nm)nm.textContent='Reading PDF…';readPdf(f).then(function(t){if(t.replace(/\s/g,'').length<80){if(nm)nm.textContent='No text found. This PDF may be scanned. Add photos of the pages instead.';return}addText(t,'PDF added',f.name)}).catch(function(){if(nm)nm.textContent='Could not read that PDF. Try copying the text instead.'})}
-  else{f.text().then(function(t){if(/\.(vtt|srt)$/i.test(f.name))t=cleanSubs(t);addText(t,'Added',f.name)}).catch(function(){if(nm)nm.textContent='Could not read that file.'})}
+  var fl=[].slice.call(e.target.files||[]);e.target.value='';
+  fl.forEach(addFile);
 });
+
+document.addEventListener('dragover',function(e){var d=e.target.closest&&e.target.closest('#drop');if(d){e.preventDefault();d.classList.add('over')}});
+document.addEventListener('dragleave',function(e){var d=e.target.closest&&e.target.closest('#drop');if(d)d.classList.remove('over')});
+document.addEventListener('drop',function(e){var d=e.target.closest&&e.target.closest('#drop');if(d){e.preventDefault();d.classList.remove('over');[].slice.call(e.dataTransfer.files||[]).forEach(addFile)}});
 
 /* ---------- boot ---------- */
 document.addEventListener('submit',function(e){if(e.target&&e.target.id==='authform'){e.preventDefault();doAuth()}});
